@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import polkaLogo from '@/assets/polka-logo.jpeg.asset.json'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -21,7 +22,15 @@ type Market = {
   description: string
 }
 
-type View = 'markets' | 'portfolio' | 'leaderboard'
+type View = 'markets' | 'portfolio' | 'leaderboard' | 'deposits'
+
+type Position = {
+  marketId: number
+  outcome: string
+  amount: number
+  expectedOutcome: number
+  resolutionDate: string
+}
 
 // ─── Soft bevel helper ────────────────────────────────────────────────────────
 // Applied to buttons + panels for a subtle raised feel
