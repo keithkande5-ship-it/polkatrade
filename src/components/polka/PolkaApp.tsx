@@ -187,7 +187,7 @@ function LiveDot() {
   )
 }
 
-function OddsBar({ yes, outcomes }: { yes: number; outcomes?: Outcome[] }) {
+function OddsBar({ yes, outcomes }: { yes: number; outcomes?: Outcome[] | undefined }) {
   if (outcomes) {
     return (
       <div className="flex w-full h-1.5 overflow-hidden rounded-none gap-px">
@@ -323,7 +323,7 @@ function MarketRow({ market, index, onSelect }: { market: Market; index: number;
 
 function MarketDetail({ market, onClose }: { market: Market; onClose: () => void }) {
   const [tab, setTab] = useState<'overview' | 'activity'>('overview')
-  const [position, setPosition] = useState<string>(market.outcomes ? market.outcomes[0].label : 'YES')
+  const [position, setPosition] = useState<string>(market.outcomes ? market.outcomes[0]!.label : 'YES')
   const [amount, setAmount] = useState('')
   const isMulti = Boolean(market.outcomes?.length)
 
@@ -376,8 +376,8 @@ function MarketDetail({ market, onClose }: { market: Market; onClose: () => void
                 <div className="border border-[#152B43]/12 p-3" style={{ background: '#F2F0EA', borderRadius: 3, boxShadow: BEVEL_INSET }}>
                   {isMulti ? (
                     <>
-                      <div style={{ fontFamily: 'Barlow Condensed, sans-serif' }} className="text-3xl font-700 text-[#152B43]">{market.outcomes![0].odds}%</div>
-                      <div className="text-[11px] text-[#152B43]/50 mt-0.5">{market.outcomes![0].label} leads</div>
+                      <div style={{ fontFamily: 'Barlow Condensed, sans-serif' }} className="text-3xl font-700 text-[#152B43]">{market.outcomes![0]!.odds}%</div>
+                      <div className="text-[11px] text-[#152B43]/50 mt-0.5">{market.outcomes![0]!.label} leads</div>
                     </>
                   ) : (
                     <>
