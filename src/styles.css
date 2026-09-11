@@ -4,6 +4,50 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* ── Polka.trade design tokens (from the Figma Make skeleton) ── */
+@theme inline {
+  --color-mineral: #f2f0ea;
+  --color-warm-white: #faf9f6;
+  --color-navy: #152b43;
+  --color-sky: #dce7ef;
+  --color-orange: #e15b36;
+  --font-condensed: "Barlow Condensed", sans-serif;
+  --font-mono: "Geist Mono", monospace;
+}
+
+/* Numeric font-weight utilities used throughout the skeleton markup */
+@utility font-300 {
+  font-weight: 300;
+}
+@utility font-400 {
+  font-weight: 400;
+}
+@utility font-500 {
+  font-weight: 500;
+}
+@utility font-600 {
+  font-weight: 600;
+}
+@utility font-700 {
+  font-weight: 700;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  font-family: "Geist", "Inter", system-ui, sans-serif;
+  background-color: #f2f0ea;
+  color: #152b43;
+}
+
+* {
+  scrollbar-width: none;
+}
+*::-webkit-scrollbar {
+  display: none;
+}
+
 /*
  * Design system definition.
  *
