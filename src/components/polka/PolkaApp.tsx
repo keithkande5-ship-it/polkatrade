@@ -525,7 +525,7 @@ type MarketDetailProps = {
 
 function MarketDetail({ market, onClose, comboPositions, onAddToCombo }: MarketDetailProps) {
   const [tab, setTab] = useState<'overview' | 'activity'>('overview')
-  const [position, setPosition] = useState<string>(market.outcomes ? market.outcomes[0].label : 'YES')
+  const [position, setPosition] = useState<string>(market.outcomes ? market.outcomes[0]!.label : 'YES')
   const [amount, setAmount] = useState('')
   const isMulti = Boolean(market.outcomes?.length)
   const isResolved = Boolean(market.isResolved)
