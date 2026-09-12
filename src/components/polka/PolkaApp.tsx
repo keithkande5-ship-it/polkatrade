@@ -81,7 +81,7 @@ function ResolvedBadge({ winner }: { winner: string }) {
   )
 }
 
-function OddsBar({ yes, outcomes }: { yes: number; outcomes?: { odds: number; color: string }[] }) {
+function OddsBar({ yes, outcomes }: { yes: number; outcomes?: { odds: number; color: string }[] | undefined }) {
   if (outcomes) {
     return (
       <div className="flex w-full h-1.5 overflow-hidden gap-px">
@@ -462,7 +462,7 @@ function MarketRow({ market, index, onSelect, comboMode, comboPositions, onAddTo
               {isMulti ? (
                 <div
                   role="button"
-                  onClick={e => handlePositionClick(e, market.outcomes![0].label, market.outcomes![0].odds)}
+                  onClick={e => handlePositionClick(e, market.outcomes![0]!.label, market.outcomes![0]!.odds)}
                   style={{ borderRadius: 3, boxShadow: BV_UP, background: NAVY, color: WARM, fontFamily: 'Barlow Condensed, sans-serif' }}
                   className="px-3 py-1.5 text-xs font-700 hover:brightness-110 cursor-pointer select-none active:scale-95 transition-all"
                 >
@@ -611,8 +611,8 @@ function MarketDetail({ market, onClose, comboPositions, onAddToCombo }: MarketD
                   <div className="border p-3" style={{ background: MINERAL, borderRadius: 3, borderColor: `${NAVY}12`, boxShadow: BV_IN }}>
                     {isMulti ? (
                       <>
-                        <div style={{ fontFamily: 'Barlow Condensed, sans-serif', color: NAVY }} className="text-3xl font-700">{market.outcomes![0].odds}%</div>
-                        <div className="text-[11px] mt-0.5" style={{ color: `${NAVY}50` }}>{market.outcomes![0].label} leads</div>
+                        <div style={{ fontFamily: 'Barlow Condensed, sans-serif', color: NAVY }} className="text-3xl font-700">{market.outcomes![0]!.odds}%</div>
+                        <div className="text-[11px] mt-0.5" style={{ color: `${NAVY}50` }}>{market.outcomes![0]!.label} leads</div>
                       </>
                     ) : (
                       <>

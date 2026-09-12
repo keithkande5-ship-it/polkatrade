@@ -12,16 +12,16 @@ export type Market = {
   category: CategoryId
   yesOdds: number
   noOdds: number
-  outcomes?: Outcome[]
+  outcomes?: Outcome[] | undefined
   volume: number       // KES integer
   endsAt: string
   isLive: boolean
-  isResolved?: boolean
-  winner?: string      // resolved winner label
-  trending?: boolean
+  isResolved?: boolean | undefined
+  winner?: string | undefined      // resolved winner label
+  trending?: boolean | undefined
   participants: number
   description: string
-  seedPool?: number    // creator seed (149 KES splits YES/NO)
+  seedPool?: number | undefined    // creator seed (149 KES splits YES/NO)
 }
 
 export type ComboPosition = {
@@ -29,22 +29,22 @@ export type ComboPosition = {
   marketQuestion: string
   position: string
   odds: number         // 0–100 probability
-  customAmount?: number // if set from market detail
-  isNew?: boolean      // for flash animation
+  customAmount?: number | undefined // if set from market detail
+  isNew?: boolean | undefined      // for flash animation
 }
 
 export type PortfolioTrade = {
   id: string
-  marketId?: number
+  marketId?: number | undefined
   market: string
   position: string
   stake: number
   odds: number
   status: 'open' | 'won' | 'lost' | 'resolved'
-  payout?: number
+  payout?: number | undefined
   date: string
-  isCombo?: boolean
-  comboLegs?: number
+  isCombo?: boolean | undefined
+  comboLegs?: number | undefined
 }
 
 export type WalletEntry = {
