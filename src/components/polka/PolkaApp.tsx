@@ -1361,6 +1361,34 @@ function TermsView({ onClose }: { onClose: () => void }) {
 
 // ─── Main App ─────────────────────────────────────────────────────────────────
 
+function BrandSplash() {
+  const [hidden, setHidden] = useState(false)
+  const [fading, setFading] = useState(false)
+  useEffect(() => {
+    const a = setTimeout(() => setFading(true), 1100)
+    const b = setTimeout(() => setHidden(true), 1750)
+    return () => { clearTimeout(a); clearTimeout(b) }
+  }, [])
+  if (hidden) return null
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center transition-opacity duration-700"
+      style={{ background: NAVY, opacity: fading ? 0 : 1, pointerEvents: fading ? 'none' : 'auto' }}
+    >
+      <div className="flex flex-col items-center gap-4">
+        <img
+          src={polkaLogo.url}
+          alt="Polka"
+          className="h-16 w-auto object-contain animate-in fade-in zoom-in-95 duration-700"
+        />
+        <div className="h-[2px] w-24 overflow-hidden" style={{ background: `${WARM}25` }}>
+          <div className="h-full w-full origin-left animate-in slide-in-from-left duration-1000" style={{ background: ORANGE }} />
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function PolkaApp() {
   // Auth & balance
   const [isSignedIn, setIsSignedIn] = useState(true) // mock signed in
