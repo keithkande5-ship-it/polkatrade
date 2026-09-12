@@ -1486,6 +1486,8 @@ export function PolkaApp() {
   return (
     <div className="min-h-full flex flex-col" style={{ background: MINERAL, fontFamily: 'Geist, Inter, system-ui, sans-serif' }}>
 
+      <BrandSplash />
+
       {/* ── Header ── */}
       <header className="sticky top-0 z-40 border-b" style={{ background: NAVY, borderColor: `${NAVY}22`, boxShadow: '0 2px 8px rgba(21,43,67,0.25)' }}>
         <div className="flex items-center h-12 px-3 sm:px-4 gap-2">
