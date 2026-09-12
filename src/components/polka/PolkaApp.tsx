@@ -1527,10 +1527,10 @@ export function PolkaApp() {
 
       {/* ── Header ── */}
       <header className="sticky top-0 z-40 border-b" style={{ background: NAVY, borderColor: `${NAVY}22`, boxShadow: '0 2px 8px rgba(21,43,67,0.25)' }}>
-        <div className="flex items-center h-12 px-3 sm:px-4 gap-2">
+        <div className="flex items-center h-16 px-3 sm:px-4 gap-2">
           {/* Logo */}
           <button onClick={() => setActiveView('markets')} className="shrink-0 mr-2 sm:mr-4 hover:opacity-80 transition-opacity">
-            <img src={polkaLogo.url} alt="Polka" className="block h-6 sm:h-7 w-auto object-contain" />
+            <img src={polkaLogo.url} alt="Polka" className="block h-9 sm:h-11 w-auto object-contain" />
           </button>
 
 
@@ -1566,11 +1566,11 @@ export function PolkaApp() {
           {/* Right */}
           <div className="flex items-center gap-1.5 ml-auto shrink-0">
             <button
-              onClick={() => setShowCreate(true)}
-              style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, boxShadow: BV_DK, background: ORANGE }}
-              className="hidden sm:block px-3 py-1.5 text-sm font-700 uppercase tracking-wider text-white hover:brightness-110 transition-all active:scale-95"
+              onClick={() => setActiveView('wallet')}
+              style={{ fontFamily: 'Geist Mono, monospace', borderRadius: 3, boxShadow: BV_DK, background: '#F7D000', color: '#6B21A8' }}
+              className="px-3 py-1.5 text-xs sm:text-sm font-700 whitespace-nowrap hover:brightness-110 transition-all active:scale-95"
             >
-              + Create
+              Bal. {balance.toFixed(2)} KSH
             </button>
             {isSignedIn ? (
               <button
@@ -1619,12 +1619,12 @@ export function PolkaApp() {
             </button>
           ))}
           <button
-            onClick={() => setShowCreate(true)}
+            onClick={() => setActiveView('wallet')}
             className="flex-1 flex flex-col items-center py-2"
-            style={{ color: ORANGE }}
+            style={{ color: activeView === 'wallet' ? '#F7D000' : 'rgba(255,255,255,0.35)' }}
           >
-            <span className="text-base">＋</span>
-            <span style={{ fontFamily: 'Barlow Condensed, sans-serif' }} className="text-[9px] font-600 uppercase tracking-wider mt-0.5">Create</span>
+            <span className="text-base">💼</span>
+            <span style={{ fontFamily: 'Barlow Condensed, sans-serif' }} className="text-[9px] font-600 uppercase tracking-wider mt-0.5">Wallet</span>
           </button>
         </div>
       </header>
@@ -1900,6 +1900,7 @@ export function PolkaApp() {
         onSignIn={() => setShowSignIn(true)}
         onSignOut={() => setIsSignedIn(false)}
         onDeposit={() => setShowDeposit(true)}
+        onCreate={() => setShowCreate(true)}
         activeView={activeView}
       />
 
