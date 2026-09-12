@@ -1,4 +1,4 @@
-import polkaLogo from '@/assets/polka-logo.jpeg.asset.json'
+import polkaLogo from '@/assets/polka-logo.png.asset.json'
 import { useState, useEffect, useRef } from 'react'
 import type { CategoryId, Market, ComboPosition, PortfolioTrade, WalletEntry, View, CustomCategory } from './types'
 import { MARKETS, MOCK_PROFILE, INITIAL_PORTFOLIO, INITIAL_WALLET, TOP_MOVERS, RECENT_BETS } from './data'
@@ -288,10 +288,11 @@ type SideMenuProps = {
   onSignIn: () => void
   onSignOut: () => void
   onDeposit: () => void
+  onCreate: () => void
   activeView: View
 }
 
-function SideMenu({ open, onClose, isSignedIn, balance, onNavigate, onSignIn, onSignOut, onDeposit, activeView }: SideMenuProps) {
+function SideMenu({ open, onClose, isSignedIn, balance, onNavigate, onSignIn, onSignOut, onDeposit, onCreate, activeView }: SideMenuProps) {
   if (!open) return null
   const nav = (v: View, label: string, icon: string) => (
     <button
@@ -342,6 +343,14 @@ function SideMenu({ open, onClose, isSignedIn, balance, onNavigate, onSignIn, on
           )}
           {nav('markets', 'Markets', '📋')}
           {nav('leaderboard', 'Leaderboard', '🏆')}
+          <button
+            onClick={() => { onCreate(); onClose() }}
+            className="w-full flex items-center gap-3 px-4 py-3 text-sm text-left transition-colors hover:brightness-95"
+            style={{ borderLeft: '3px solid transparent' }}
+          >
+            <span className="text-base w-5 text-center shrink-0" style={{ color: ORANGE }}>＋</span>
+            <span className="font-600" style={{ color: ORANGE }}>Create Market</span>
+          </button>
           <div className="my-1 mx-4 h-px" style={{ background: `${NAVY}12` }} />
           {nav('notifications', 'Notifications', '🔔')}
           {nav('settings', 'Settings', '⚙️')}
