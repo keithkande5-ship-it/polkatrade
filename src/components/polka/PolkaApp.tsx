@@ -1491,9 +1491,9 @@ export function PolkaApp() {
         <div className="flex items-center h-12 px-3 sm:px-4 gap-2">
           {/* Logo */}
           <button onClick={() => setActiveView('markets')} className="shrink-0 mr-2 sm:mr-4 hover:opacity-80 transition-opacity">
-            <span style={{ fontFamily: 'Barlow Condensed, sans-serif', letterSpacing: '-0.01em' }} className="text-lg sm:text-xl font-700 text-white">POLKA</span>
-            <span style={{ fontFamily: 'Barlow Condensed, sans-serif', color: ORANGE }} className="text-lg sm:text-xl font-500">.TRADE</span>
+            <img src={polkaLogo.url} alt="Polka" className="block h-6 sm:h-7 w-auto object-contain" />
           </button>
+
 
           {/* Desktop nav */}
           <nav className="hidden sm:flex items-center gap-0.5 flex-1">
