@@ -1,6 +1,16 @@
-# Roadmap
-- [ ] Replace Polka branding and add the opening splash
-- [ ] Upgrade prediction entry and enforce same-outcome additions
-- [ ] Record confirmed positions in market details and Portfolio
-- [ ] Complete sign-in state and M-Pesa deposit prototype
-- [ ] Verify mobile and desktop flows
+## Current request
+- [ ] Promo image carousel above first market
+- [ ] Percentage / decimal odds display toggle beside balance
+- [ ] Mobile UI at 125%; desktop unchanged
+- [ ] Dynamic number flip effects and volume activity indicators
+- [ ] Market cards reveal left-to-right while scrolling
+- [ ] Clarify and simplify combo flow, especially mobile
+- [ ] Crypto coin prices, selectors, cards, and detail mini chart
+- [ ] Market creation types: yes/no, multiple outcome, custom, crypto
+- [ ] Resolution date, statuses, criteria, and sources
+- [ ] Fresh personalized feed with traded/resolved category handling
+- [ ] Logged-out sign-in/register controls and account-action gating
+- [ ] How It Works and FAQs pages
+- [ ] Replace emojis with Lucide icons
+- [ ] Dark mode toggle in menu
+- [ ] Finish Withdraw action on ledger from prior request
