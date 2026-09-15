@@ -78,7 +78,7 @@ export function OddsToggle({ color = '#F7D000' }: { color?: string }) {
 
 /* ── Skeuomorphic flip number ─────────────────────────────────────────────── */
 
-export function FlipNumber({ value, className, style }: { value: string | number; className?: string; style?: React.CSSProperties }) {
+export function FlipNumber({ value, className, style }: { value: string | number; className?: string | undefined; style?: React.CSSProperties | undefined }) {
   const text = String(value)
   const [shown, setShown] = useState(text)
   const [flip, setFlip] = useState(false)
@@ -108,7 +108,7 @@ export function FlipNumber({ value, className, style }: { value: string | number
   )
 }
 
-export function OddsNumber({ value, className, style }: { value: number; className?: string; style?: React.CSSProperties }) {
+export function OddsNumber({ value, className, style }: { value: number; className?: string | undefined; style?: React.CSSProperties | undefined }) {
   const { mode } = useOddsMode()
   return <FlipNumber value={fmtOdds(value, mode)} className={className} style={style} />
 }
