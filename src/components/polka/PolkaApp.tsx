@@ -540,256 +540,294 @@ function MarketRow({ market: baseMarket, index, onSelect, comboMode, comboPositi
   )
 }
 
-// ─── Market Detail ────────────────────────────────────────────────────────────
+// ─── Market Detail — standalone page ─────────────────────────────────────────
 
 type MarketDetailProps = {
   market: Market
   onClose: () => void
   comboPositions: ComboPosition[]
   onAddToCombo: (m: Market, position: string, odds: number, amount?: number) => void
+  onConfirm: (m: Market, position: string, odds: number, amount: number) => void
+  myTrades: PortfolioTrade[]
 }
 
-function MarketDetail({ market, onClose, comboPositions, onAddToCombo }: MarketDetailProps) {
+const QUICK_AMOUNTS = [99, 199, 999, 9999]
+
+function MarketDetail({ market: baseMarket, onClose, comboPositions, onAddToCombo, onConfirm, myTrades }: MarketDetailProps) {
+  const market = useLiveMarket(baseMarket)
   const [tab, setTab] = useState<'overview' | 'activity'>('overview')
   const [position, setPosition] = useState<string>(market.outcomes ? market.outcomes[0]!.label : 'YES')
-  const [amount, setAmount] = useState('')
+  const [amount, setAmount] = useState('99')
   const isMulti = Boolean(market.outcomes?.length)
   const isResolved = Boolean(market.isResolved)
   const alreadyInCombo = comboPositions.some(p => p.marketId === market.id)
   const hideStats = shouldHideStats(market.volume, market.participants)
 
+  const existing = myTrades.find(t => t.marketId === market.id && t.status === 'open')
+  const locked = existing?.position
+  const conflicting = Boolean(locked && locked !== position)
+
   const selectedOdds = isMulti
     ? (market.outcomes!.find(o => o.label === position)?.odds ?? 50)
     : (position === 'YES' ? market.yesOdds : market.noOdds)
 
-  const selectedColor = isMulti
-    ? (market.outcomes!.find(o => o.label === position)?.color ?? NAVY)
-    : NAVY
+  const numAmount = Number(amount) || 0
+  const estimated = Math.round(estimatePayout(numAmount, selectedOdds))
+
+  const statusLabel = marketStatus(market)
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-4" style={{ background: `${NAVY}50` }} onClick={onClose}>
-      <div
-        className="w-full md:max-w-2xl bg-[#FAF9F6] flex flex-col overflow-hidden"
-        style={{ borderRadius: 4, border: `1px solid ${NAVY}18`, maxHeight: '92dvh', boxShadow: '0 24px 64px rgba(21,43,67,0.2)' }}
-        onClick={e => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="border-b px-4 py-4 flex items-start gap-3 shrink-0" style={{ background: SKY, borderColor: `${NAVY}15`, boxShadow: '0 1px 0 rgba(255,255,255,0.6) inset' }}>
-          <div className="flex-1 min-w-0">
-            {isResolved ? <ResolvedBadge winner={market.winner!} /> : market.isLive ? <LiveDot /> : null}
-            <h2 className="text-sm font-600 mt-1 leading-snug" style={{ color: NAVY }}>{market.question}</h2>
-            <div className="flex flex-wrap gap-2 mt-1.5 text-[11px]" style={{ color: `${NAVY}50` }}>
-              <span className="flex items-center gap-1">{getCatIcon(market.category, [])} {market.category}</span>
-              <span>·</span><span>Ends {market.endsAt}</span>
-              {!hideStats && <><span>·</span><span>{market.participants.toLocaleString()} traders</span></>}
-            </div>
-          </div>
-          <button onClick={onClose} className="text-[#152B43]/40 hover:text-[#152B43] text-2xl w-8 h-8 flex items-center justify-center shrink-0">×</button>
-        </div>
+    <div className="fixed inset-0 z-50 flex flex-col" style={{ background: MINERAL }}>
+      {/* Page bar */}
+      <div className="shrink-0 px-3 sm:px-4 py-3 flex items-center gap-3" style={{ background: NAVY, boxShadow: BV_DK }}>
+        <button
+          onClick={onClose}
+          style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, border: '1px solid rgba(255,255,255,0.2)' }}
+          className="px-2.5 py-1.5 text-xs font-700 uppercase tracking-wider text-white/80 hover:text-white hover:bg-white/10 transition-colors shrink-0"
+        >
+          ← Markets
+        </button>
+        <span style={{ fontFamily: 'Barlow Condensed, sans-serif' }} className="text-[10px] uppercase tracking-widest text-white/35 font-600 truncate">
+          {market.category} · {statusLabel}
+        </span>
+      </div>
 
-        {/* Tabs */}
-        <div className="flex border-b shrink-0" style={{ background: WARM, borderColor: `${NAVY}15` }}>
-          {(['overview', 'activity'] as const).map(t => (
-            <button
-              key={t}
-              onClick={() => setTab(t)}
-              style={{ fontFamily: 'Barlow Condensed, sans-serif' }}
-              className={`flex-1 py-2.5 text-sm font-600 uppercase tracking-wider border-b-2 transition-colors ${tab === t ? 'border-[#E15B36] text-[#152B43]' : 'border-transparent text-[#152B43]/40 hover:text-[#152B43]'}`}
-            >
-              {t}
-            </button>
-          ))}
-        </div>
+      <div className="flex-1 overflow-y-auto">
+        <div className="mx-auto w-full max-w-6xl p-3 sm:p-4 flex flex-col lg:grid lg:grid-cols-[minmax(0,1fr)_360px] gap-3 sm:gap-4 items-start">
 
-        <div className="flex-1 overflow-y-auto">
-          {tab === 'overview' && (
-            <div className="p-4 space-y-4">
+          {/* ── Trade panel (first on mobile, right column on desktop) ── */}
+          <div className="order-1 lg:order-2 w-full lg:sticky lg:top-4">
+            {!isResolved ? (
+              <div className="border p-4" style={{ background: SKY, borderRadius: 4, borderColor: `${NAVY}15`, boxShadow: BV_IN }}>
+                <div style={{ fontFamily: 'Barlow Condensed, sans-serif', color: `${NAVY}50` }} className="text-[10px] uppercase tracking-widest font-600 mb-3">Place a prediction</div>
 
-              {/* RESOLVED ANNOUNCEMENT */}
-              {isResolved && (
-                <div className="border p-4 space-y-2" style={{ background: '#EBF7EE', borderColor: '#2A6B3A33', borderRadius: 4 }}>
-                  <div style={{ fontFamily: 'Barlow Condensed, sans-serif', color: '#2A6B3A' }} className="text-xs uppercase tracking-widest font-700">✓ Market Resolved</div>
-                  <div style={{ fontFamily: 'Barlow Condensed, sans-serif', color: NAVY }} className="text-xl font-700">Winner: {market.winner}</div>
-                  <p className="text-xs leading-relaxed" style={{ color: `${NAVY}70` }}>
-                    This market has been officially resolved. Winning positions received parimutuel payouts.
-                    Platform fee of 2% was applied to the total pool of {formatVolume(market.volume)}.
+                {isMulti ? (
+                  <div className="flex flex-wrap gap-1.5 mb-3">
+                    {market.outcomes!.map((o, i) => (
+                      <button
+                        key={i}
+                        onClick={() => setPosition(o.label)}
+                        style={{
+                          borderRadius: 3, fontFamily: 'Barlow Condensed, sans-serif',
+                          background: position === o.label ? o.color : 'transparent',
+                          color: position === o.label ? '#fff' : NAVY,
+                          border: `1.5px solid ${position === o.label ? o.color : NAVY + '20'}`,
+                          boxShadow: position === o.label ? BV_DK : 'none',
+                        }}
+                        className="px-3 py-2 text-sm font-700 transition-all hover:brightness-105"
+                      >
+                        {o.label} <span className="opacity-70">{o.odds}%</span>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex gap-2 mb-3">
+                    {(['YES', 'NO'] as const).map(p => (
+                      <button
+                        key={p}
+                        onClick={() => setPosition(p)}
+                        style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, boxShadow: position === p ? BV_DK : BV_IN, background: position === p ? NAVY : `${WARM}70`, border: `1px solid ${position === p ? NAVY : NAVY + '25'}`, color: position === p ? WARM : NAVY }}
+                        className="flex-1 py-3 text-base font-700 uppercase tracking-wider transition-all flex items-center justify-center gap-1.5"
+                      >
+                        {p} · <OddsNumber value={p === 'YES' ? market.yesOdds : market.noOdds} />
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* Amount */}
+                <div style={{ fontFamily: 'Barlow Condensed, sans-serif', color: `${NAVY}50` }} className="text-[10px] uppercase tracking-widest font-600 mb-1.5">Amount to enter</div>
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {QUICK_AMOUNTS.map(a => (
+                    <button
+                      key={a}
+                      onClick={() => setAmount(String(a))}
+                      style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, boxShadow: amount === String(a) ? BV_DK : BV_UP, background: amount === String(a) ? NAVY : WARM, color: amount === String(a) ? WARM : `${NAVY}70`, border: `1px solid ${amount === String(a) ? NAVY : NAVY + '18'}` }}
+                      className="px-3 py-1.5 text-sm font-700 transition-all"
+                    >
+                      {a.toLocaleString()}
+                    </button>
+                  ))}
+                </div>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-600 pointer-events-none" style={{ color: `${NAVY}45` }}>KES</span>
+                  <input
+                    type="number"
+                    value={amount}
+                    onChange={e => setAmount(e.target.value)}
+                    placeholder="0"
+                    className="w-full border pl-10 pr-3 py-3 text-base outline-none"
+                    style={{ borderRadius: 3, fontFamily: 'Geist Mono, monospace', boxShadow: BV_IN, background: WARM, color: NAVY, borderColor: `${NAVY}20` }}
+                  />
+                </div>
+
+                {/* Estimated payout */}
+                <div className="mt-3 border p-3" style={{ background: '#EBF7EE', borderColor: '#2A6B3A33', borderRadius: 3 }}>
+                  <div style={{ fontFamily: 'Barlow Condensed, sans-serif', color: '#2A6B3A' }} className="text-[10px] uppercase tracking-widest font-700">Estimated payout</div>
+                  <FlipNumber
+                    value={formatKES(estimated)}
+                    style={{ fontFamily: 'Barlow Condensed, sans-serif', color: '#1F6B45', fontSize: 34, fontWeight: 800, lineHeight: 1.05 }}
+                  />
+                  <p className="text-[10px] leading-relaxed mt-1" style={{ color: `${NAVY}55` }}>
+                    Estimate only. Payouts are parimutuel — the final amount depends on the winning pool at resolution.
                   </p>
-                  <div className="flex gap-3 mt-2 pt-2 border-t" style={{ borderColor: '#2A6B3A22' }}>
-                    <div>
-                      <div style={{ fontFamily: 'Geist Mono, monospace', color: '#2A6B3A' }} className="text-sm font-700">{formatVolume(market.volume)}</div>
-                      <div className="text-[10px]" style={{ color: `${NAVY}45` }}>Total pool</div>
-                    </div>
-                    <div>
-                      <div style={{ fontFamily: 'Geist Mono, monospace', color: '#2A6B3A' }} className="text-sm font-700">{formatVolume(Math.round(market.volume * 0.98))}</div>
-                      <div className="text-[10px]" style={{ color: `${NAVY}45` }}>Paid to winners</div>
-                    </div>
-                    <div>
-                      <div style={{ fontFamily: 'Geist Mono, monospace', color: ORANGE }} className="text-sm font-700">{formatVolume(Math.round(market.volume * 0.02))}</div>
-                      <div className="text-[10px]" style={{ color: `${NAVY}45` }}>Platform fee</div>
-                    </div>
-                  </div>
                 </div>
-              )}
 
-              {/* Stats row */}
-              {!isResolved && (
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="border p-3" style={{ background: MINERAL, borderRadius: 3, borderColor: `${NAVY}12`, boxShadow: BV_IN }}>
-                    {isMulti ? (
-                      <>
-                        <div style={{ fontFamily: 'Barlow Condensed, sans-serif', color: NAVY }} className="text-3xl font-700">{market.outcomes![0]!.odds}%</div>
-                        <div className="text-[11px] mt-0.5" style={{ color: `${NAVY}50` }}>{market.outcomes![0]!.label} leads</div>
-                      </>
-                    ) : (
-                      <>
-                        <div style={{ fontFamily: 'Barlow Condensed, sans-serif', color: NAVY }} className="text-3xl font-700">{market.yesOdds}%</div>
-                        <div className="text-[11px] mt-0.5" style={{ color: `${NAVY}50` }}>Chance YES</div>
-                      </>
-                    )}
-                    <div className="mt-2"><OddsBar yes={market.yesOdds} outcomes={market.outcomes} /></div>
-                  </div>
-                  <div className="border p-3" style={{ background: MINERAL, borderRadius: 3, borderColor: `${NAVY}12`, boxShadow: BV_IN }}>
-                    {!hideStats ? (
-                      <>
-                        <div style={{ fontFamily: 'Geist Mono, monospace', color: NAVY }} className="text-sm font-600">{formatVolume(market.volume)}</div>
-                        <div className="text-[11px] mt-0.5" style={{ color: `${NAVY}50` }}>Total volume</div>
-                        <div className="text-[11px] mt-2" style={{ color: `${NAVY}40` }}>{market.participants.toLocaleString()} traders</div>
-                      </>
-                    ) : (
-                      <>
-                        <div className="text-2xl">🔒</div>
-                        <div className="text-[11px] mt-1" style={{ color: `${NAVY}40` }}>Stats unlock at 1K KES volume</div>
-                      </>
-                    )}
-                  </div>
+                {conflicting && (
+                  <p className="text-[11px] mt-2" style={{ color: ORANGE }}>
+                    You already hold <strong>{locked}</strong> on this market. You can add to that position, but not the opposite one.
+                  </p>
+                )}
+
+                <button
+                  onClick={() => { if (numAmount > 0 && !conflicting) onConfirm(baseMarket, position, selectedOdds, numAmount) }}
+                  disabled={numAmount <= 0 || conflicting}
+                  style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, boxShadow: BV_DK, background: ORANGE }}
+                  className="w-full mt-3 py-3 text-sm font-800 uppercase tracking-wider text-white hover:brightness-110 transition-all active:scale-[0.99] disabled:opacity-40"
+                >
+                  Confirm prediction
+                </button>
+                <button
+                  onClick={() => onAddToCombo(baseMarket, position, selectedOdds, numAmount || undefined)}
+                  style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, boxShadow: BV_DK, background: alreadyInCombo ? '#4C0F8F' : '#6B21A8' }}
+                  className="w-full mt-2 py-2.5 text-xs font-700 uppercase tracking-wider text-white hover:brightness-110 transition-all active:scale-[0.99]"
+                >
+                  {alreadyInCombo ? '✓ In combo' : 'Add to combo'}
+                </button>
+                <p className="text-[10px] mt-2 leading-relaxed" style={{ color: `${NAVY}40` }}>
+                  A combo groups separate predictions into one checkout. Each one still settles on its own market.
+                </p>
+              </div>
+            ) : (
+              <div className="border p-4 space-y-2" style={{ background: '#EBF7EE', borderColor: '#2A6B3A33', borderRadius: 4 }}>
+                <div style={{ fontFamily: 'Barlow Condensed, sans-serif', color: '#2A6B3A' }} className="text-xs uppercase tracking-widest font-700">Market resolved</div>
+                <div style={{ fontFamily: 'Barlow Condensed, sans-serif', color: NAVY }} className="text-xl font-700">Winner: {market.winner}</div>
+                <p className="text-xs leading-relaxed" style={{ color: `${NAVY}70` }}>
+                  Winning positions received parimutuel payouts from the {formatVolume(market.volume)} pool, less a 2% platform fee.
+                </p>
+              </div>
+            )}
+
+            {existing && (
+              <div className="border p-3 mt-3" style={{ background: WARM, borderRadius: 3, borderColor: `${NAVY}15` }}>
+                <div style={{ fontFamily: 'Barlow Condensed, sans-serif', color: `${NAVY}45` }} className="text-[10px] uppercase tracking-widest font-600">Your position</div>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-xs font-700 px-2 py-0.5 text-white" style={{ background: NAVY, borderRadius: 3, fontFamily: 'Barlow Condensed, sans-serif' }}>{existing.position}</span>
+                  <span style={{ fontFamily: 'Geist Mono, monospace', color: NAVY }} className="text-sm font-600">{formatKES(existing.stake)}</span>
+                  <span className="text-[10px]" style={{ color: `${NAVY}40` }}>held until resolution</span>
                 </div>
-              )}
+              </div>
+            )}
+          </div>
 
-              {/* Multi-outcome breakdown */}
+          {/* ── Market body ── */}
+          <div className="order-2 lg:order-1 w-full space-y-3">
+            <div className="border p-4" style={{ background: WARM, borderRadius: 4, borderColor: `${NAVY}15` }}>
+              <div className="flex items-center gap-2 flex-wrap">
+                <StatusPill market={market} />
+                {isResolved ? <ResolvedBadge winner={market.winner!} /> : market.isLive ? <LiveDot /> : null}
+                <span className="text-[11px]" style={{ color: `${NAVY}45` }}>Resolves {market.endsAt}</span>
+              </div>
+              <h1 className="text-base sm:text-xl font-600 mt-2 leading-snug" style={{ color: NAVY }}>{market.question}</h1>
+
+              <div className="grid grid-cols-2 gap-3 mt-3">
+                <div className="border p-3" style={{ background: MINERAL, borderRadius: 3, borderColor: `${NAVY}12`, boxShadow: BV_IN }}>
+                  <OddsNumber
+                    value={isMulti ? market.outcomes![0]!.odds : market.yesOdds}
+                    style={{ fontFamily: 'Barlow Condensed, sans-serif', color: NAVY, fontSize: 30, fontWeight: 700 }}
+                  />
+                  <div className="text-[11px] mt-0.5" style={{ color: `${NAVY}50` }}>{isMulti ? `${market.outcomes![0]!.label} leads` : 'Chance YES'}</div>
+                  <div className="mt-2"><OddsBar yes={market.yesOdds} outcomes={isResolved ? undefined : market.outcomes} /></div>
+                </div>
+                <div className="border p-3" style={{ background: MINERAL, borderRadius: 3, borderColor: `${NAVY}12`, boxShadow: BV_IN }}>
+                  {!hideStats ? (
+                    <>
+                      <div style={{ fontFamily: 'Geist Mono, monospace', color: NAVY }} className="text-sm font-600">
+                        <FlipNumber value={formatVolume(market.volume)} /><VolumeFCT marketId={market.id} />
+                      </div>
+                      <div className="text-[11px] mt-0.5" style={{ color: `${NAVY}50` }}>Total volume</div>
+                      <div className="text-[11px] mt-2" style={{ color: `${NAVY}40` }}>
+                        <FlipNumber value={market.participants.toLocaleString()} /> traders
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-[11px]" style={{ color: `${NAVY}40` }}>Stats unlock at 1K KES volume</div>
+                  )}
+                </div>
+              </div>
+
               {isMulti && (
-                <div className="space-y-1.5">
+                <div className="space-y-1.5 mt-3">
                   {market.outcomes!.map((o, i) => (
                     <div key={i} className="flex items-center gap-2">
                       <div className="w-2 h-2 rounded-sm shrink-0" style={{ background: o.color }} />
-                      <span className="text-xs flex-1" style={{ color: NAVY, fontWeight: market.winner === o.label ? 700 : 400 }}>{o.label} {market.winner === o.label && '✓'}</span>
+                      <span className="text-xs flex-1" style={{ color: NAVY, fontWeight: market.winner === o.label ? 700 : 400 }}>{o.label}</span>
                       <div className="w-20 h-1.5 overflow-hidden shrink-0" style={{ background: SKY }}>
                         <div className="h-full" style={{ width: `${o.odds}%`, background: o.color }} />
                       </div>
-                      <span style={{ fontFamily: 'Barlow Condensed, sans-serif', color: NAVY, fontWeight: 700 }} className="text-sm w-8 text-right shrink-0">{o.odds}%</span>
+                      <OddsNumber value={o.odds} style={{ fontFamily: 'Barlow Condensed, sans-serif', color: NAVY, fontWeight: 700 }} className="text-sm w-12 text-right shrink-0" />
                     </div>
                   ))}
                 </div>
               )}
+            </div>
 
-              {/* Resolution criteria */}
-              <div>
-                <div style={{ fontFamily: 'Barlow Condensed, sans-serif', color: `${NAVY}40` }} className="text-[10px] uppercase tracking-widest font-600 mb-1.5">Resolution Criteria</div>
-                <p className="text-xs leading-relaxed" style={{ color: `${NAVY}75` }}>{market.description}</p>
+            {/* Tabs */}
+            <div className="border overflow-hidden" style={{ background: WARM, borderRadius: 4, borderColor: `${NAVY}15` }}>
+              <div className="flex border-b" style={{ borderColor: `${NAVY}15` }}>
+                {(['overview', 'activity'] as const).map(t => (
+                  <button
+                    key={t}
+                    onClick={() => setTab(t)}
+                    style={{ fontFamily: 'Barlow Condensed, sans-serif' }}
+                    className={`flex-1 py-2.5 text-sm font-600 uppercase tracking-wider border-b-2 transition-colors ${tab === t ? 'border-[#E15B36] text-[#152B43]' : 'border-transparent text-[#152B43]/40 hover:text-[#152B43]'}`}
+                  >
+                    {t}
+                  </button>
+                ))}
               </div>
 
-              {/* Place prediction — only when not resolved */}
-              {!isResolved && (
-                <div className="border p-4" style={{ background: SKY, borderRadius: 3, borderColor: `${NAVY}15`, boxShadow: BV_IN }}>
-                  <div style={{ fontFamily: 'Barlow Condensed, sans-serif', color: `${NAVY}50` }} className="text-[10px] uppercase tracking-widest font-600 mb-3">Place Prediction</div>
-
-                  {isMulti ? (
-                    <div className="flex flex-wrap gap-1.5 mb-3">
-                      {market.outcomes!.map((o, i) => (
-                        <button
-                          key={i}
-                          onClick={() => setPosition(o.label)}
-                          style={{
-                            borderRadius: 3,
-                            fontFamily: 'Barlow Condensed, sans-serif',
-                            background: position === o.label ? o.color : 'transparent',
-                            color: position === o.label ? '#fff' : NAVY,
-                            border: `1.5px solid ${position === o.label ? o.color : NAVY + '20'}`,
-                            boxShadow: position === o.label ? BV_DK : 'none',
-                          }}
-                          className="px-2.5 py-1.5 text-xs font-700 transition-all hover:brightness-105"
-                        >
-                          {o.label} <span className="opacity-70">{o.odds}%</span>
-                        </button>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="flex gap-2 mb-3">
-                      {(['YES', 'NO'] as const).map(p => (
-                        <button
-                          key={p}
-                          onClick={() => setPosition(p)}
-                          style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, boxShadow: position === p ? BV_DK : BV_IN, background: position === p ? NAVY : `${WARM}70`, border: `1px solid ${position === p ? NAVY : NAVY + '25'}`, color: position === p ? WARM : NAVY }}
-                          className="flex-1 py-2 text-sm font-700 uppercase tracking-wider transition-all"
-                        >
-                          {p} · {p === 'YES' ? market.yesOdds : market.noOdds}%
-                        </button>
-                      ))}
-                    </div>
-                  )}
-
-                  <div className="flex gap-2">
-                    <div className="flex-1 relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-600 pointer-events-none" style={{ color: `${NAVY}45` }}>KES</span>
-                      <input
-                        type="number"
-                        value={amount}
-                        onChange={e => setAmount(e.target.value)}
-                        placeholder="0"
-                        className="w-full border pl-10 pr-3 py-2.5 text-sm placeholder-[#152B43]/25 outline-none"
-                        style={{ borderRadius: 3, fontFamily: 'Geist Mono, monospace', boxShadow: BV_IN, background: WARM, color: NAVY, borderColor: `${NAVY}20` }}
-                      />
-                    </div>
-                    <button
-                      style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, boxShadow: BV_DK, background: ORANGE }}
-                      className="px-4 py-2.5 text-sm font-700 uppercase tracking-wider text-white hover:brightness-110 transition-colors active:scale-95 shrink-0"
-                    >
-                      Confirm
-                    </button>
-                    {/* Add to Combo */}
-                    <button
-                      onClick={() => onAddToCombo(market, position, selectedOdds, amount ? Number(amount) : undefined)}
-                      style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, boxShadow: BV_DK, background: alreadyInCombo ? '#4C0F8F' : '#6B21A8' }}
-                      className="px-3 py-2.5 text-xs font-700 uppercase tracking-wider text-white hover:brightness-110 transition-all active:scale-95 shrink-0"
-                    >
-                      {alreadyInCombo ? '✓ In Combo' : '+ Combo'}
-                    </button>
+              {tab === 'overview' ? (
+                <div className="p-4 space-y-3">
+                  <div>
+                    <div style={{ fontFamily: 'Barlow Condensed, sans-serif', color: `${NAVY}40` }} className="text-[10px] uppercase tracking-widest font-600 mb-1">Resolves YES if</div>
+                    <p className="text-xs leading-relaxed" style={{ color: `${NAVY}75` }}>{market.description}</p>
                   </div>
-
-                  {amount && (
-                    <div className="mt-2 text-[11px]" style={{ color: `${NAVY}50` }}>
-                      Est. return if win: <span style={{ fontFamily: 'Geist Mono, monospace', color: NAVY, fontWeight: 600 }}>{formatKES(Math.round(estimatePayout(Number(amount), selectedOdds)))}</span>
-                      <span className="ml-2 text-[10px]" style={{ color: `${NAVY}35` }}>(parimutuel · 2% fee)</span>
+                  <div>
+                    <div style={{ fontFamily: 'Barlow Condensed, sans-serif', color: `${NAVY}40` }} className="text-[10px] uppercase tracking-widest font-600 mb-1">Resolves NO if</div>
+                    <p className="text-xs leading-relaxed" style={{ color: `${NAVY}75` }}>None of the YES conditions above are met by {market.endsAt}.</p>
+                  </div>
+                  <div>
+                    <div style={{ fontFamily: 'Barlow Condensed, sans-serif', color: `${NAVY}40` }} className="text-[10px] uppercase tracking-widest font-600 mb-1">Sources</div>
+                    <p className="text-xs leading-relaxed" style={{ color: `${NAVY}75` }}>Official public announcements and at least two established Kenyan news outlets.</p>
+                  </div>
+                  <p className="text-[10px] leading-relaxed pt-1" style={{ color: `${NAVY}30` }}>
+                    Polka.trade is a prediction market, not a sportsbook. Payouts are parimutuel — winners share the pool less a 2% platform fee. 18+ only.
+                  </p>
+                </div>
+              ) : (
+                <div className="divide-y" style={{ borderColor: `${NAVY}08` }}>
+                  {RECENT_BETS.map((b, i) => (
+                    <div key={i} className="flex items-center gap-3 px-4 py-3" style={{ background: i % 2 === 0 ? WARM : SKY }}>
+                      <div className="w-8 h-8 rounded-full flex items-center justify-center text-[11px] text-white font-600 shrink-0" style={{ background: NAVY }}>{b.user[0]}</div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs font-500" style={{ color: NAVY }}>{b.user}</div>
+                        <div className="text-[11px] truncate" style={{ color: `${NAVY}45` }}>{b.market}</div>
+                      </div>
+                      <div className="text-xs font-700 px-2 py-0.5 text-white shrink-0" style={{ background: NAVY, borderRadius: 2, fontFamily: 'Barlow Condensed, sans-serif' }}>{b.action}</div>
+                      <div className="text-xs shrink-0" style={{ fontFamily: 'Geist Mono, monospace', color: NAVY }}>{b.amount}</div>
                     </div>
-                  )}
+                  ))}
                 </div>
               )}
-
-              <p className="text-[10px] leading-relaxed" style={{ color: `${NAVY}30` }}>
-                Polka.trade is a prediction market, not a sportsbook. All payouts are parimutuel — winners share the total pool less a 2% platform fee. 18+ only.
-              </p>
             </div>
-          )}
-
-          {tab === 'activity' && (
-            <div className="divide-y" style={{ borderColor: `${NAVY}08` }}>
-              {RECENT_BETS.map((b, i) => (
-                <div key={i} className="flex items-center gap-3 px-4 py-3" style={{ background: i % 2 === 0 ? WARM : SKY }}>
-                  <div className="w-8 h-8 rounded-full flex items-center justify-center text-[11px] text-white font-600 shrink-0" style={{ background: NAVY }}>{b.user[0]}</div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-xs font-500" style={{ color: NAVY }}>{b.user}</div>
-                    <div className="text-[11px] truncate" style={{ color: `${NAVY}45` }}>{b.market}</div>
-                  </div>
-                  <div className="text-xs font-700 px-2 py-0.5 text-white shrink-0" style={{ background: NAVY, borderRadius: 2, fontFamily: 'Barlow Condensed, sans-serif' }}>{b.action}</div>
-                  <div className="text-xs shrink-0" style={{ fontFamily: 'Geist Mono, monospace', color: NAVY }}>{b.amount}</div>
-                </div>
-              ))}
-            </div>
-          )}
+          </div>
         </div>
       </div>
     </div>
   )
 }
+
 
 // ─── Sign-In Modal ────────────────────────────────────────────────────────────
 
