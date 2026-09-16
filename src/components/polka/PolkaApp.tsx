@@ -386,7 +386,8 @@ type MarketRowProps = {
   customCategories: CustomCategory[]
 }
 
-function MarketRow({ market, index, onSelect, comboMode, comboPositions, onAddToCombo, customCategories }: MarketRowProps) {
+function MarketRow({ market: baseMarket, index, onSelect, comboMode, comboPositions, onAddToCombo, customCategories }: MarketRowProps) {
+  const market = useLiveMarket(baseMarket)
   const bg = index % 2 === 0 ? WARM : SKY
   const isMulti = Boolean(market.outcomes?.length)
   const isResolved = Boolean(market.isResolved)
@@ -426,11 +427,22 @@ function MarketRow({ market, index, onSelect, comboMode, comboPositions, onAddTo
             <span style={{ fontFamily: 'Barlow Condensed, sans-serif', color: `${NAVY}45` }} className="text-[10px] uppercase tracking-wider font-600">↑ Trending</span>
           )}
           {inCombo && <span style={{ fontFamily: 'Barlow Condensed, sans-serif', color: '#6B21A8' }} className="text-[10px] uppercase tracking-wider font-700">● In Combo</span>}
-          <span className="ml-auto text-[10px] shrink-0 hidden sm:block" style={{ color: `${NAVY}35` }}>Ends {market.endsAt}</span>
+          <StatusPill market={market} />
+          <span className="ml-auto text-[10px] shrink-0" style={{ color: `${NAVY}35` }}>Ends {market.endsAt}</span>
         </div>
 
         {/* Question */}
-        <p className="text-sm font-500 leading-snug" style={{ color: NAVY }}>{market.question}</p>
+        <p className="text-sm font-500 leading-snug" style={{ color: NAVY }}>
+          {market.question}{' '}
+          <span
+            role="button"
+            onClick={e => { e.stopPropagation(); onSelect(baseMarket) }}
+            className="whitespace-nowrap underline cursor-pointer hover:opacity-80"
+            style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 11, color: ORANGE, textTransform: 'uppercase', letterSpacing: '0.06em' }}
+          >
+            view details
+          </span>
+        </p>
 
         {/* Odds bar */}
         <div className="mt-2">
@@ -442,10 +454,10 @@ function MarketRow({ market, index, onSelect, comboMode, comboPositions, onAddTo
           {/* Binary odds */}
           {!isMulti && !isResolved && (
             <div className="flex items-center gap-2 shrink-0">
-              <span style={{ fontFamily: 'Barlow Condensed, sans-serif', color: NAVY }} className="text-base font-700">{market.yesOdds}%</span>
+              <OddsNumber value={market.yesOdds} style={{ fontFamily: 'Barlow Condensed, sans-serif', color: NAVY }} className="text-base font-700" />
               <span style={{ color: `${NAVY}35` }} className="text-[10px]">YES</span>
               <div className="w-px h-4" style={{ background: `${NAVY}20` }} />
-              <span style={{ fontFamily: 'Barlow Condensed, sans-serif', color: `${NAVY}55` }} className="text-base font-700">{market.noOdds}%</span>
+              <OddsNumber value={market.noOdds} style={{ fontFamily: 'Barlow Condensed, sans-serif', color: `${NAVY}55` }} className="text-base font-700" />
               <span style={{ color: `${NAVY}30` }} className="text-[10px]">NO</span>
             </div>
           )}
@@ -453,7 +465,7 @@ function MarketRow({ market, index, onSelect, comboMode, comboPositions, onAddTo
           {/* Volume — hidden for thin markets */}
           {!hideStats && (
             <span style={{ fontFamily: 'Geist Mono, monospace', color: `${NAVY}45` }} className="text-[10px]">
-              {formatVolume(market.volume)} · {market.participants.toLocaleString()} traders
+              <FlipNumber value={formatVolume(market.volume)} /><VolumeFCT marketId={market.id} /> · <FlipNumber value={market.participants.toLocaleString()} /> traders
             </span>
           )}
 
