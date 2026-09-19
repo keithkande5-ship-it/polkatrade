@@ -1519,7 +1519,11 @@ function BrandSplash() {
   )
 }
 
-export function PolkaApp() {
+function PolkaAppInner() {
+  const { push } = useToasts()
+  const { bump } = useLive()
+  const [showTutorial, setShowTutorial] = useState(false)
+  const [showWithdraw, setShowWithdraw] = useState(false)
   // Auth & balance
   const [isSignedIn, setIsSignedIn] = useState(true) // mock signed in
   const [balance, setBalance] = useState(MOCK_PROFILE.balance)
