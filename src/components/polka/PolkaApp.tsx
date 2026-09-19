@@ -1171,8 +1171,8 @@ function PortfolioPage({ trades, balance, isSignedIn, onNavigate, onSignIn, onOp
 
 // ─── Wallet Page ──────────────────────────────────────────────────────────────
 
-function WalletPage({ balance, entries, onDeposit }: { balance: number; entries: WalletEntry[]; onDeposit: () => void }) {
-  const TYPE_ICONS: Record<string, string> = { deposit: '↓', withdrawal: '↑', bet: '→', win: '★', seed: '⊞', combo: '🔗', loss: '✗' }
+function WalletPage({ balance, entries, onDeposit, onWithdraw }: { balance: number; entries: WalletEntry[]; onDeposit: () => void; onWithdraw: () => void }) {
+  const TYPE_ICONS: Record<string, string> = { deposit: '↓', withdrawal: '↑', bet: '→', win: '★', seed: '⊞', combo: '≡', loss: '✗' }
   const TYPE_COLORS: Record<string, string> = { deposit: '#2A6B3A', win: '#2A6B3A', withdrawal: ORANGE, bet: NAVY, seed: NAVY, combo: '#6B21A8', loss: ORANGE }
   return (
     <div className="flex-1 overflow-y-auto">
