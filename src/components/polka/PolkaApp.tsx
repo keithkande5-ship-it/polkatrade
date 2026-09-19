@@ -47,25 +47,30 @@ function InstagramLogo({ size = 13 }: { size?: number }) {
 // ─── Category definitions ─────────────────────────────────────────────────────
 type CatDef = { id: CategoryId; label: string; icon: React.ReactNode }
 const BASE_CATEGORIES: CatDef[] = [
-  { id: 'All',           label: 'All',           icon: '⊞' },
-  { id: 'Kenya',         label: 'Kenya',         icon: '🇰🇪' },
-  { id: 'Sports',        label: 'Sports',        icon: '⚽' },
-  { id: 'Politics',      label: 'Politics',      icon: '🏛' },
-  { id: 'Crypto',        label: 'Crypto',        icon: '₿' },
-  { id: 'Entertainment', label: 'Entertainment', icon: '🎬' },
-  { id: 'Business',      label: 'Business',      icon: '📈' },
-  { id: 'Science',       label: 'Science',       icon: '🔬' },
-  { id: 'Global',        label: 'Global',        icon: '🌍' },
-  { id: 'Twitter',       label: 'X / Twitter',   icon: <XLogo size={12}/> },
-  { id: 'TikTok',        label: 'TikTok',        icon: <TikTokLogo size={12}/> },
-  { id: 'Instagram',     label: 'Instagram',     icon: <InstagramLogo size={12}/> },
+  { id: 'All',           label: 'All',           icon: <CatIcon id="All" /> },
+  { id: 'Kenya',         label: 'Kenya',         icon: <CatIcon id="Kenya" /> },
+  { id: 'Sports',        label: 'Sports',        icon: <CatIcon id="Sports" /> },
+  { id: 'Politics',      label: 'Politics',      icon: <CatIcon id="Politics" /> },
+  { id: 'Crypto',        label: 'Crypto',        icon: <CatIcon id="Crypto" /> },
+  { id: 'Entertainment', label: 'Entertainment', icon: <CatIcon id="Entertainment" /> },
+  { id: 'Business',      label: 'Business',      icon: <CatIcon id="Business" /> },
+  { id: 'Science',       label: 'Science',       icon: <CatIcon id="Science" /> },
+  { id: 'Global',        label: 'Global',        icon: <CatIcon id="Global" /> },
+  { id: 'Twitter',       label: 'X / Twitter',   icon: <CatIcon id="Twitter" /> },
+  { id: 'TikTok',        label: 'TikTok',        icon: <CatIcon id="TikTok" /> },
+  { id: 'Instagram',     label: 'Instagram',     icon: <CatIcon id="Instagram" /> },
 ]
 
+/** Feed filter pills that are not real categories. */
+const FEED_FILTERS = [
+  { id: 'my', label: 'My Markets' },
+  { id: 'closed', label: 'Closed' },
+  { id: 'resolved', label: 'Resolved' },
+  { id: 'disputed', label: 'Disputed' },
+] as const
+
 function getCatIcon(id: CategoryId, custom: CustomCategory[]): React.ReactNode {
-  const base = BASE_CATEGORIES.find(c => c.id === id)
-  if (base) return base.icon
-  const cc = custom.find(c => c.id === id)
-  return cc ? cc.emoji : '🔷'
+  return catIconFor(id, custom)
 }
 
 // ─── Shared small components ──────────────────────────────────────────────────
