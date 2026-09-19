@@ -1562,8 +1562,26 @@ function PolkaAppInner() {
     ...customCategories.map(c => ({ id: c.id, label: c.label, icon: c.emoji, custom: true })),
   ]
 
+  const myMarketIds = new Set(
+    portfolio.map(t => t.marketId).filter((v): v is number => typeof v === 'number'),
+  )
+  const feedFilter = FEED_FILTERS.some(f => f.id === activeCategory) ? String(activeCategory) : null
+  const filterCounts: Record<string, number> = {
+    my: MARKETS.filter(m => myMarketIds.has(m.id)).length,
+    closed: MARKETS.filter(m => !m.isResolved && marketStatus(m) === 'closed').length,
+    resolved: MARKETS.filter(m => Boolean(m.isResolved)).length,
+    disputed: 0,
+  }
+
   const filteredMarkets = MARKETS
-    .filter(m => activeCategory === 'All' || m.category === activeCategory)
+    .filter(m => {
+      if (feedFilter === 'my') return myMarketIds.has(m.id)
+      if (feedFilter === 'closed') return !m.isResolved && marketStatus(m) === 'closed'
+      if (feedFilter === 'resolved') return Boolean(m.isResolved)
+      if (feedFilter === 'disputed') return false
+      if (activeCategory === 'All') return !myMarketIds.has(m.id)
+      return m.category === activeCategory
+    })
     .filter(m => m.question.toLowerCase().includes(searchQuery.toLowerCase()))
     .sort((a, b) => {
       if (a.isResolved && !b.isResolved) return 1
