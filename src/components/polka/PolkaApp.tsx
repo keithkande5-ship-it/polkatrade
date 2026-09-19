@@ -1731,7 +1731,7 @@ function PolkaAppInner() {
               {comboPositions.length > 0 && (
                 <span className="w-4 h-4 rounded-full text-[9px] flex items-center justify-center text-white font-700" style={{ background: '#6B21A8' }}>{comboPositions.length}</span>
               )}
-              ⚡ Combo
+              <NavIcons.combo size={14} /> Combo
             </button>
           </nav>
 
