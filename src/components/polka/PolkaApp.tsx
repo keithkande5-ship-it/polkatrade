@@ -6,8 +6,10 @@ import { formatVolume, formatKES, shouldHideStats, estimatePayout, comboMath, se
 import {
   OddsProvider, OddsToggle, OddsNumber, FlipNumber, LiveProvider, ToastProvider, useToasts,
   useLive, useLiveMarket, VolumeFCT, StatusPill, marketStatus, DisplayKeyframes,
+  CatIcon, catIconFor, NavIcons,
 } from './display'
 import { Tutorial } from './Tutorial'
+import { WithdrawModal } from './WithdrawModal'
 
 // ─── Style constants ──────────────────────────────────────────────────────────
 const BV_UP   = '0 1px 0 rgba(255,255,255,0.55) inset, 0 -1px 0 rgba(0,0,0,0.10) inset'
@@ -19,51 +21,34 @@ const SKY     = '#DCE7EF'
 const WARM    = '#FAF9F6'
 const MINERAL = '#F2F0EA'
 
-// ─── Brand Logos ──────────────────────────────────────────────────────────────
-function XLogo({ size = 13 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
-      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.748l7.73-8.835L2.25 2.25h6.803l4.279 5.658 5.912-5.658zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-    </svg>
-  )
-}
-function TikTokLogo({ size = 13 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
-      <path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.34 6.34 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.69a8.27 8.27 0 004.83 1.56V6.79a4.85 4.85 0 01-1.06-.1z"/>
-    </svg>
-  )
-}
-function InstagramLogo({ size = 13 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
-      <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
-    </svg>
-  )
-}
 
 // ─── Category definitions ─────────────────────────────────────────────────────
 type CatDef = { id: CategoryId; label: string; icon: React.ReactNode }
 const BASE_CATEGORIES: CatDef[] = [
-  { id: 'All',           label: 'All',           icon: '⊞' },
-  { id: 'Kenya',         label: 'Kenya',         icon: '🇰🇪' },
-  { id: 'Sports',        label: 'Sports',        icon: '⚽' },
-  { id: 'Politics',      label: 'Politics',      icon: '🏛' },
-  { id: 'Crypto',        label: 'Crypto',        icon: '₿' },
-  { id: 'Entertainment', label: 'Entertainment', icon: '🎬' },
-  { id: 'Business',      label: 'Business',      icon: '📈' },
-  { id: 'Science',       label: 'Science',       icon: '🔬' },
-  { id: 'Global',        label: 'Global',        icon: '🌍' },
-  { id: 'Twitter',       label: 'X / Twitter',   icon: <XLogo size={12}/> },
-  { id: 'TikTok',        label: 'TikTok',        icon: <TikTokLogo size={12}/> },
-  { id: 'Instagram',     label: 'Instagram',     icon: <InstagramLogo size={12}/> },
+  { id: 'All',           label: 'All',           icon: <CatIcon id="All" /> },
+  { id: 'Kenya',         label: 'Kenya',         icon: <CatIcon id="Kenya" /> },
+  { id: 'Sports',        label: 'Sports',        icon: <CatIcon id="Sports" /> },
+  { id: 'Politics',      label: 'Politics',      icon: <CatIcon id="Politics" /> },
+  { id: 'Crypto',        label: 'Crypto',        icon: <CatIcon id="Crypto" /> },
+  { id: 'Entertainment', label: 'Entertainment', icon: <CatIcon id="Entertainment" /> },
+  { id: 'Business',      label: 'Business',      icon: <CatIcon id="Business" /> },
+  { id: 'Science',       label: 'Science',       icon: <CatIcon id="Science" /> },
+  { id: 'Global',        label: 'Global',        icon: <CatIcon id="Global" /> },
+  { id: 'Twitter',       label: 'X / Twitter',   icon: <CatIcon id="Twitter" /> },
+  { id: 'TikTok',        label: 'TikTok',        icon: <CatIcon id="TikTok" /> },
+  { id: 'Instagram',     label: 'Instagram',     icon: <CatIcon id="Instagram" /> },
 ]
 
+/** Feed filter pills that are not real categories. */
+const FEED_FILTERS = [
+  { id: 'my', label: 'My Markets' },
+  { id: 'closed', label: 'Closed' },
+  { id: 'resolved', label: 'Resolved' },
+  { id: 'disputed', label: 'Disputed' },
+] as const
+
 function getCatIcon(id: CategoryId, custom: CustomCategory[]): React.ReactNode {
-  const base = BASE_CATEGORIES.find(c => c.id === id)
-  if (base) return base.icon
-  const cc = custom.find(c => c.id === id)
-  return cc ? cc.emoji : '🔷'
+  return catIconFor(id, custom)
 }
 
 // ─── Shared small components ──────────────────────────────────────────────────
@@ -929,6 +914,14 @@ function DepositModal({ onClose, onDeposit }: { onClose: () => void; onDeposit: 
 function CreateMarket({ onClose }: { onClose: () => void }) {
   const [step, setStep] = useState(1)
   const [form, setForm] = useState({ question: '', description: '', category: 'Kenya' as CategoryId, endDate: '', startingOdds: 50 })
+  const [marketType, setMarketType] = useState<'binary' | 'multiple' | 'custom'>('binary')
+  const [outcomes, setOutcomes] = useState<{ label: string; odds: number }[]>([
+    { label: '', odds: 50 },
+    { label: '', odds: 50 },
+  ])
+  const oddsTotal = outcomes.reduce((s, o) => s + o.odds, 0)
+  const setOutcome = (i: number, patch: Partial<{ label: string; odds: number }>) =>
+    setOutcomes(os => os.map((o, idx) => (idx === i ? { ...o, ...patch } : o)))
   const { seed, yesPool, noPool } = seedSplit(form.startingOdds)
   const allCats = BASE_CATEGORIES.filter(c => c.id !== 'All')
 
@@ -961,6 +954,76 @@ function CreateMarket({ onClose }: { onClose: () => void }) {
                   ))}
                 </div>
               </div>
+              {/* Market type */}
+              <div>
+                <label className="block text-[11px] font-600 uppercase tracking-wider mb-1.5" style={{ color: `${NAVY}55`, fontFamily: 'Barlow Condensed, sans-serif' }}>Market Type</label>
+                <div className="flex flex-wrap gap-1.5">
+                  {([
+                    { id: 'binary', label: 'Yes / No' },
+                    { id: 'multiple', label: 'Multiple outcomes' },
+                    { id: 'custom', label: 'Custom' },
+                  ] as const).map(t => (
+                    <button
+                      key={t.id}
+                      onClick={() => setMarketType(t.id)}
+                      style={{ borderRadius: 3, fontFamily: 'Barlow Condensed, sans-serif', boxShadow: marketType === t.id ? BV_DK : BV_UP, background: marketType === t.id ? NAVY : WARM, color: marketType === t.id ? WARM : `${NAVY}60`, border: `1px solid ${marketType === t.id ? NAVY : NAVY + '15'}` }}
+                      className="px-2.5 py-1.5 text-xs font-600 uppercase tracking-wider transition-all"
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[11px] mt-1.5" style={{ color: `${NAVY}45` }}>
+                  {marketType === 'binary'
+                    ? 'Two outcomes — YES or NO.'
+                    : marketType === 'multiple'
+                      ? 'Several named outcomes, each with a starting probability. They must add up to 100%.'
+                      : 'Free-form outcomes you name yourself — useful for scores, ranges or league winners.'}
+                </p>
+              </div>
+
+              {/* Outcome editor */}
+              {marketType !== 'binary' && (
+                <div>
+                  <label className="block text-[11px] font-600 uppercase tracking-wider mb-1.5" style={{ color: `${NAVY}55`, fontFamily: 'Barlow Condensed, sans-serif' }}>Outcomes</label>
+                  <div className="space-y-1.5">
+                    {outcomes.map((o, i) => (
+                      <div key={i} className="flex gap-1.5 items-center">
+                        <input
+                          value={o.label}
+                          onChange={e => setOutcome(i, { label: e.target.value })}
+                          placeholder={`Outcome ${i + 1}`}
+                          className="flex-1 min-w-0 border px-2.5 py-2 text-sm outline-none"
+                          style={{ borderRadius: 3, boxShadow: BV_IN, background: MINERAL, color: NAVY, borderColor: `${NAVY}15` }}
+                        />
+                        <input
+                          type="number" min={1} max={99} value={o.odds}
+                          onChange={e => setOutcome(i, { odds: Math.max(1, Math.min(99, Number(e.target.value))) })}
+                          className="w-16 border px-2 py-2 text-sm outline-none"
+                          style={{ borderRadius: 3, boxShadow: BV_IN, background: MINERAL, color: NAVY, borderColor: `${NAVY}15`, fontFamily: 'Geist Mono, monospace' }}
+                        />
+                        <span className="text-[11px]" style={{ color: `${NAVY}40` }}>%</span>
+                        {outcomes.length > 2 && (
+                          <button onClick={() => setOutcomes(os => os.filter((_, idx) => idx !== i))} className="w-7 h-7 shrink-0" style={{ color: `${NAVY}40` }}>×</button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex items-center justify-between mt-2">
+                    <button
+                      onClick={() => setOutcomes(os => [...os, { label: '', odds: 10 }])}
+                      style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, boxShadow: BV_UP, border: `1px solid ${NAVY}15`, color: `${NAVY}55` }}
+                      className="px-2.5 py-1.5 text-[11px] font-700 uppercase tracking-wider"
+                    >
+                      Add outcome
+                    </button>
+                    <span style={{ fontFamily: 'Geist Mono, monospace', color: oddsTotal === 100 ? '#1F6B45' : ORANGE }} className="text-[11px] font-700">
+                      {oddsTotal}% / 100%
+                    </span>
+                  </div>
+                </div>
+              )}
+
               <div>
                 <label className="block text-[11px] font-600 uppercase tracking-wider mb-1.5" style={{ color: `${NAVY}55`, fontFamily: 'Barlow Condensed, sans-serif' }}>End Date</label>
                 <input type="date" value={form.endDate} onChange={e => setForm({ ...form, endDate: e.target.value })} className="border p-2.5 text-sm outline-none w-full" style={{ borderRadius: 3, boxShadow: BV_IN, background: MINERAL, color: NAVY, borderColor: `${NAVY}15` }} />
@@ -1186,8 +1249,8 @@ function PortfolioPage({ trades, balance, isSignedIn, onNavigate, onSignIn, onOp
 
 // ─── Wallet Page ──────────────────────────────────────────────────────────────
 
-function WalletPage({ balance, entries, onDeposit }: { balance: number; entries: WalletEntry[]; onDeposit: () => void }) {
-  const TYPE_ICONS: Record<string, string> = { deposit: '↓', withdrawal: '↑', bet: '→', win: '★', seed: '⊞', combo: '🔗', loss: '✗' }
+function WalletPage({ balance, entries, onDeposit, onWithdraw }: { balance: number; entries: WalletEntry[]; onDeposit: () => void; onWithdraw: () => void }) {
+  const TYPE_ICONS: Record<string, string> = { deposit: '↓', withdrawal: '↑', bet: '→', win: '★', seed: '⊞', combo: '≡', loss: '✗' }
   const TYPE_COLORS: Record<string, string> = { deposit: '#2A6B3A', win: '#2A6B3A', withdrawal: ORANGE, bet: NAVY, seed: NAVY, combo: '#6B21A8', loss: ORANGE }
   return (
     <div className="flex-1 overflow-y-auto">
@@ -1197,7 +1260,10 @@ function WalletPage({ balance, entries, onDeposit }: { balance: number; entries:
             <div style={{ fontFamily: 'Barlow Condensed, sans-serif' }} className="text-[10px] uppercase tracking-widest text-white/40 font-600">Available Balance</div>
             <div style={{ fontFamily: 'Barlow Condensed, sans-serif', color: '#F7D000' }} className="text-3xl font-700 mt-1">{formatKES(balance)}</div>
           </div>
-          <button onClick={onDeposit} style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, boxShadow: BV_DK, background: '#2A7B6F' }} className="px-4 py-2.5 text-sm font-700 uppercase tracking-wider text-white hover:brightness-110 transition-all">+ Deposit</button>
+          <div className="flex gap-2">
+            <button onClick={onDeposit} style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, boxShadow: BV_DK, background: '#2A7B6F' }} className="px-4 py-2.5 text-sm font-700 uppercase tracking-wider text-white hover:brightness-110 transition-all">+ Deposit</button>
+            <button onClick={onWithdraw} style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, boxShadow: BV_DK, background: ORANGE }} className="px-4 py-2.5 text-sm font-700 uppercase tracking-wider text-white hover:brightness-110 transition-all">Withdraw</button>
+          </div>
         </div>
       </div>
       <div className="px-4 py-2 border-b" style={{ background: MINERAL, borderColor: `${NAVY}15` }}>
@@ -1453,7 +1519,11 @@ function BrandSplash() {
   )
 }
 
-export function PolkaApp() {
+function PolkaAppInner() {
+  const { push } = useToasts()
+  const { bump } = useLive()
+  const [showTutorial, setShowTutorial] = useState(false)
+  const [showWithdraw, setShowWithdraw] = useState(false)
   // Auth & balance
   const [isSignedIn, setIsSignedIn] = useState(true) // mock signed in
   const [balance, setBalance] = useState(MOCK_PROFILE.balance)
@@ -1492,8 +1562,26 @@ export function PolkaApp() {
     ...customCategories.map(c => ({ id: c.id, label: c.label, icon: c.emoji, custom: true })),
   ]
 
+  const myMarketIds = new Set(
+    portfolio.map(t => t.marketId).filter((v): v is number => typeof v === 'number'),
+  )
+  const feedFilter = FEED_FILTERS.some(f => f.id === activeCategory) ? String(activeCategory) : null
+  const filterCounts: Record<string, number> = {
+    my: MARKETS.filter(m => myMarketIds.has(m.id)).length,
+    closed: MARKETS.filter(m => !m.isResolved && marketStatus(m) === 'closed').length,
+    resolved: MARKETS.filter(m => Boolean(m.isResolved)).length,
+    disputed: 0,
+  }
+
   const filteredMarkets = MARKETS
-    .filter(m => activeCategory === 'All' || m.category === activeCategory)
+    .filter(m => {
+      if (feedFilter === 'my') return myMarketIds.has(m.id)
+      if (feedFilter === 'closed') return !m.isResolved && marketStatus(m) === 'closed'
+      if (feedFilter === 'resolved') return Boolean(m.isResolved)
+      if (feedFilter === 'disputed') return false
+      if (activeCategory === 'All') return !myMarketIds.has(m.id)
+      return m.category === activeCategory
+    })
     .filter(m => m.question.toLowerCase().includes(searchQuery.toLowerCase()))
     .sort((a, b) => {
       if (a.isResolved && !b.isResolved) return 1
@@ -1581,6 +1669,8 @@ export function PolkaApp() {
     setBalance(b => b - amount)
     setWalletEntries(ws => [entry, ...ws])
     setPortfolio(ps => [trade, ...ps])
+    bump(market.id, position === 'NO' ? -1 : 1, amount)
+    push('Prediction recorded — added to portfolio')
     setSelectedMarket(null)
     setActiveView('portfolio')
   }
@@ -1641,12 +1731,13 @@ export function PolkaApp() {
               {comboPositions.length > 0 && (
                 <span className="w-4 h-4 rounded-full text-[9px] flex items-center justify-center text-white font-700" style={{ background: '#6B21A8' }}>{comboPositions.length}</span>
               )}
-              ⚡ Combo
+              <NavIcons.combo size={14} /> Combo
             </button>
           </nav>
 
           {/* Right */}
           <div className="flex items-center gap-1.5 ml-auto shrink-0">
+            <OddsToggle />
             <button
               onClick={() => setActiveView('wallet')}
               style={{ fontFamily: 'Geist Mono, monospace', borderRadius: 3, boxShadow: BV_DK, background: '#F7D000', color: '#6B21A8' }}
@@ -1686,28 +1777,21 @@ export function PolkaApp() {
         {/* Mobile bottom nav strip */}
         <div className="sm:hidden flex border-t" style={{ background: '#0f2035', borderColor: 'rgba(255,255,255,0.06)' }}>
           {([
-            { key: 'markets', label: 'Markets', icon: '📋' },
-            { key: 'portfolio', label: 'Portfolio', icon: '📊' },
-            { key: 'leaderboard', label: 'Scores', icon: '🏆' },
-          ] as { key: View; label: string; icon: string }[]).map(({ key, label, icon }) => (
+            { key: 'markets', label: 'Markets', Icon: NavIcons.markets },
+            { key: 'portfolio', label: 'Portfolio', Icon: NavIcons.portfolio },
+            { key: 'leaderboard', label: 'Scores', Icon: NavIcons.leaderboard },
+            { key: 'wallet', label: 'Wallet', Icon: NavIcons.wallet },
+          ] as { key: View; label: string; Icon: typeof NavIcons.markets }[]).map(({ key, label, Icon }) => (
             <button
               key={key}
               onClick={() => setActiveView(key)}
               className="flex-1 flex flex-col items-center py-2 transition-colors"
               style={{ color: activeView === key ? '#F7D000' : 'rgba(255,255,255,0.35)' }}
             >
-              <span className="text-base">{icon}</span>
+              <Icon size={17} />
               <span style={{ fontFamily: 'Barlow Condensed, sans-serif' }} className="text-[9px] font-600 uppercase tracking-wider mt-0.5">{label}</span>
             </button>
           ))}
-          <button
-            onClick={() => setActiveView('wallet')}
-            className="flex-1 flex flex-col items-center py-2"
-            style={{ color: activeView === 'wallet' ? '#F7D000' : 'rgba(255,255,255,0.35)' }}
-          >
-            <span className="text-base">💼</span>
-            <span style={{ fontFamily: 'Barlow Condensed, sans-serif' }} className="text-[9px] font-600 uppercase tracking-wider mt-0.5">Wallet</span>
-          </button>
         </div>
       </header>
 
