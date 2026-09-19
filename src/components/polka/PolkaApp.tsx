@@ -1777,28 +1777,21 @@ function PolkaAppInner() {
         {/* Mobile bottom nav strip */}
         <div className="sm:hidden flex border-t" style={{ background: '#0f2035', borderColor: 'rgba(255,255,255,0.06)' }}>
           {([
-            { key: 'markets', label: 'Markets', icon: '📋' },
-            { key: 'portfolio', label: 'Portfolio', icon: '📊' },
-            { key: 'leaderboard', label: 'Scores', icon: '🏆' },
-          ] as { key: View; label: string; icon: string }[]).map(({ key, label, icon }) => (
+            { key: 'markets', label: 'Markets', Icon: NavIcons.markets },
+            { key: 'portfolio', label: 'Portfolio', Icon: NavIcons.portfolio },
+            { key: 'leaderboard', label: 'Scores', Icon: NavIcons.leaderboard },
+            { key: 'wallet', label: 'Wallet', Icon: NavIcons.wallet },
+          ] as { key: View; label: string; Icon: typeof NavIcons.markets }[]).map(({ key, label, Icon }) => (
             <button
               key={key}
               onClick={() => setActiveView(key)}
               className="flex-1 flex flex-col items-center py-2 transition-colors"
               style={{ color: activeView === key ? '#F7D000' : 'rgba(255,255,255,0.35)' }}
             >
-              <span className="text-base">{icon}</span>
+              <Icon size={17} />
               <span style={{ fontFamily: 'Barlow Condensed, sans-serif' }} className="text-[9px] font-600 uppercase tracking-wider mt-0.5">{label}</span>
             </button>
           ))}
-          <button
-            onClick={() => setActiveView('wallet')}
-            className="flex-1 flex flex-col items-center py-2"
-            style={{ color: activeView === 'wallet' ? '#F7D000' : 'rgba(255,255,255,0.35)' }}
-          >
-            <span className="text-base">💼</span>
-            <span style={{ fontFamily: 'Barlow Condensed, sans-serif' }} className="text-[9px] font-600 uppercase tracking-wider mt-0.5">Wallet</span>
-          </button>
         </div>
       </header>
 
