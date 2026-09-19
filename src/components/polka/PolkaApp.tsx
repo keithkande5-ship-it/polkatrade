@@ -914,6 +914,14 @@ function DepositModal({ onClose, onDeposit }: { onClose: () => void; onDeposit: 
 function CreateMarket({ onClose }: { onClose: () => void }) {
   const [step, setStep] = useState(1)
   const [form, setForm] = useState({ question: '', description: '', category: 'Kenya' as CategoryId, endDate: '', startingOdds: 50 })
+  const [marketType, setMarketType] = useState<'binary' | 'multiple' | 'custom'>('binary')
+  const [outcomes, setOutcomes] = useState<{ label: string; odds: number }[]>([
+    { label: '', odds: 50 },
+    { label: '', odds: 50 },
+  ])
+  const oddsTotal = outcomes.reduce((s, o) => s + o.odds, 0)
+  const setOutcome = (i: number, patch: Partial<{ label: string; odds: number }>) =>
+    setOutcomes(os => os.map((o, idx) => (idx === i ? { ...o, ...patch } : o)))
   const { seed, yesPool, noPool } = seedSplit(form.startingOdds)
   const allCats = BASE_CATEGORIES.filter(c => c.id !== 'All')
 
