@@ -6,8 +6,10 @@ import { formatVolume, formatKES, shouldHideStats, estimatePayout, comboMath, se
 import {
   OddsProvider, OddsToggle, OddsNumber, FlipNumber, LiveProvider, ToastProvider, useToasts,
   useLive, useLiveMarket, VolumeFCT, StatusPill, marketStatus, DisplayKeyframes,
+  CatIcon, catIconFor, NavIcons,
 } from './display'
 import { Tutorial } from './Tutorial'
+import { WithdrawModal } from './WithdrawModal'
 
 // ─── Style constants ──────────────────────────────────────────────────────────
 const BV_UP   = '0 1px 0 rgba(255,255,255,0.55) inset, 0 -1px 0 rgba(0,0,0,0.10) inset'
