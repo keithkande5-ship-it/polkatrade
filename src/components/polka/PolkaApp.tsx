@@ -1669,6 +1669,8 @@ function PolkaAppInner() {
     setBalance(b => b - amount)
     setWalletEntries(ws => [entry, ...ws])
     setPortfolio(ps => [trade, ...ps])
+    bump(market.id, position === 'NO' ? -1 : 1, amount)
+    push('Prediction recorded — added to portfolio')
     setSelectedMarket(null)
     setActiveView('portfolio')
   }
