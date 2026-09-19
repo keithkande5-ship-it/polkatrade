@@ -1182,7 +1182,10 @@ function WalletPage({ balance, entries, onDeposit, onWithdraw }: { balance: numb
             <div style={{ fontFamily: 'Barlow Condensed, sans-serif' }} className="text-[10px] uppercase tracking-widest text-white/40 font-600">Available Balance</div>
             <div style={{ fontFamily: 'Barlow Condensed, sans-serif', color: '#F7D000' }} className="text-3xl font-700 mt-1">{formatKES(balance)}</div>
           </div>
-          <button onClick={onDeposit} style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, boxShadow: BV_DK, background: '#2A7B6F' }} className="px-4 py-2.5 text-sm font-700 uppercase tracking-wider text-white hover:brightness-110 transition-all">+ Deposit</button>
+          <div className="flex gap-2">
+            <button onClick={onDeposit} style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, boxShadow: BV_DK, background: '#2A7B6F' }} className="px-4 py-2.5 text-sm font-700 uppercase tracking-wider text-white hover:brightness-110 transition-all">+ Deposit</button>
+            <button onClick={onWithdraw} style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, boxShadow: BV_DK, background: ORANGE }} className="px-4 py-2.5 text-sm font-700 uppercase tracking-wider text-white hover:brightness-110 transition-all">Withdraw</button>
+          </div>
         </div>
       </div>
       <div className="px-4 py-2 border-b" style={{ background: MINERAL, borderColor: `${NAVY}15` }}>
