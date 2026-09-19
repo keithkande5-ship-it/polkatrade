@@ -1993,6 +1993,8 @@ export function PolkaApp() {
           onClose={() => setSelectedMarket(null)}
           comboPositions={comboPositions}
           onAddToCombo={(market, position, odds, amount) => addToCombo(market, position, odds, amount)}
+          onConfirm={confirmTrade}
+          myTrades={portfolio}
         />
       )}
       {showCreate && <CreateMarket onClose={() => setShowCreate(false)} />}
