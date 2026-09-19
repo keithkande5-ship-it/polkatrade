@@ -1737,6 +1737,7 @@ function PolkaAppInner() {
 
           {/* Right */}
           <div className="flex items-center gap-1.5 ml-auto shrink-0">
+            <OddsToggle />
             <button
               onClick={() => setActiveView('wallet')}
               style={{ fontFamily: 'Geist Mono, monospace', borderRadius: 3, boxShadow: BV_DK, background: '#F7D000', color: '#6B21A8' }}
