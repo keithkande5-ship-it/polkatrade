@@ -1558,6 +1558,33 @@ export function PolkaApp() {
     setActiveView('portfolio')
   }
 
+  const confirmTrade = (market: Market, position: string, odds: number, amount: number) => {
+    const entry: WalletEntry = {
+      id: `w${Date.now()}`,
+      type: 'bet',
+      amount,
+      description: `${position} — ${market.question}`,
+      date: 'Just now',
+      status: 'completed',
+      sign: '-',
+    }
+    const trade: PortfolioTrade = {
+      id: `t${Date.now()}`,
+      marketId: market.id,
+      market: market.question,
+      position,
+      stake: amount,
+      odds,
+      status: 'open',
+      date: new Date().toLocaleDateString('en-KE', { month: 'short', day: 'numeric' }),
+    }
+    setBalance(b => b - amount)
+    setWalletEntries(ws => [entry, ...ws])
+    setPortfolio(ps => [trade, ...ps])
+    setSelectedMarket(null)
+    setActiveView('portfolio')
+  }
+
   const handleDeposit = (amount: number) => {
     const entry: WalletEntry = {
       id: `w${Date.now()}`,
