@@ -954,6 +954,76 @@ function CreateMarket({ onClose }: { onClose: () => void }) {
                   ))}
                 </div>
               </div>
+              {/* Market type */}
+              <div>
+                <label className="block text-[11px] font-600 uppercase tracking-wider mb-1.5" style={{ color: `${NAVY}55`, fontFamily: 'Barlow Condensed, sans-serif' }}>Market Type</label>
+                <div className="flex flex-wrap gap-1.5">
+                  {([
+                    { id: 'binary', label: 'Yes / No' },
+                    { id: 'multiple', label: 'Multiple outcomes' },
+                    { id: 'custom', label: 'Custom' },
+                  ] as const).map(t => (
+                    <button
+                      key={t.id}
+                      onClick={() => setMarketType(t.id)}
+                      style={{ borderRadius: 3, fontFamily: 'Barlow Condensed, sans-serif', boxShadow: marketType === t.id ? BV_DK : BV_UP, background: marketType === t.id ? NAVY : WARM, color: marketType === t.id ? WARM : `${NAVY}60`, border: `1px solid ${marketType === t.id ? NAVY : NAVY + '15'}` }}
+                      className="px-2.5 py-1.5 text-xs font-600 uppercase tracking-wider transition-all"
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[11px] mt-1.5" style={{ color: `${NAVY}45` }}>
+                  {marketType === 'binary'
+                    ? 'Two outcomes — YES or NO.'
+                    : marketType === 'multiple'
+                      ? 'Several named outcomes, each with a starting probability. They must add up to 100%.'
+                      : 'Free-form outcomes you name yourself — useful for scores, ranges or league winners.'}
+                </p>
+              </div>
+
+              {/* Outcome editor */}
+              {marketType !== 'binary' && (
+                <div>
+                  <label className="block text-[11px] font-600 uppercase tracking-wider mb-1.5" style={{ color: `${NAVY}55`, fontFamily: 'Barlow Condensed, sans-serif' }}>Outcomes</label>
+                  <div className="space-y-1.5">
+                    {outcomes.map((o, i) => (
+                      <div key={i} className="flex gap-1.5 items-center">
+                        <input
+                          value={o.label}
+                          onChange={e => setOutcome(i, { label: e.target.value })}
+                          placeholder={`Outcome ${i + 1}`}
+                          className="flex-1 min-w-0 border px-2.5 py-2 text-sm outline-none"
+                          style={{ borderRadius: 3, boxShadow: BV_IN, background: MINERAL, color: NAVY, borderColor: `${NAVY}15` }}
+                        />
+                        <input
+                          type="number" min={1} max={99} value={o.odds}
+                          onChange={e => setOutcome(i, { odds: Math.max(1, Math.min(99, Number(e.target.value))) })}
+                          className="w-16 border px-2 py-2 text-sm outline-none"
+                          style={{ borderRadius: 3, boxShadow: BV_IN, background: MINERAL, color: NAVY, borderColor: `${NAVY}15`, fontFamily: 'Geist Mono, monospace' }}
+                        />
+                        <span className="text-[11px]" style={{ color: `${NAVY}40` }}>%</span>
+                        {outcomes.length > 2 && (
+                          <button onClick={() => setOutcomes(os => os.filter((_, idx) => idx !== i))} className="w-7 h-7 shrink-0" style={{ color: `${NAVY}40` }}>×</button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex items-center justify-between mt-2">
+                    <button
+                      onClick={() => setOutcomes(os => [...os, { label: '', odds: 10 }])}
+                      style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, boxShadow: BV_UP, border: `1px solid ${NAVY}15`, color: `${NAVY}55` }}
+                      className="px-2.5 py-1.5 text-[11px] font-700 uppercase tracking-wider"
+                    >
+                      Add outcome
+                    </button>
+                    <span style={{ fontFamily: 'Geist Mono, monospace', color: oddsTotal === 100 ? '#1F6B45' : ORANGE }} className="text-[11px] font-700">
+                      {oddsTotal}% / 100%
+                    </span>
+                  </div>
+                </div>
+              )}
+
               <div>
                 <label className="block text-[11px] font-600 uppercase tracking-wider mb-1.5" style={{ color: `${NAVY}55`, fontFamily: 'Barlow Condensed, sans-serif' }}>End Date</label>
                 <input type="date" value={form.endDate} onChange={e => setForm({ ...form, endDate: e.target.value })} className="border p-2.5 text-sm outline-none w-full" style={{ borderRadius: 3, boxShadow: BV_IN, background: MINERAL, color: NAVY, borderColor: `${NAVY}15` }} />
