@@ -1689,6 +1689,23 @@ function PolkaAppInner() {
     setWalletEntries(ws => [entry, ...ws])
   }
 
+  const handleWithdraw = (amount: number, phone: string) => {
+    const digits = phone.replace(/\D/g, '')
+    const maskedPhone = digits.length >= 4 ? `•••• ${digits.slice(-4)}` : 'M-PESA'
+    const entry: WalletEntry = {
+      id: `w${Date.now()}`,
+      type: 'withdrawal',
+      amount,
+      description: `M-PESA withdrawal to ${maskedPhone}`,
+      date: 'Just now',
+      status: 'pending',
+      sign: '-',
+    }
+    setBalance(current => current - amount)
+    setWalletEntries(current => [entry, ...current])
+    push('Withdrawal queued in your ledger', 'info')
+  }
+
   // Page content for secondary views
   const isSecondaryView = !['markets', 'portfolio', 'leaderboard'].includes(activeView)
 
@@ -1976,7 +1993,12 @@ function PolkaAppInner() {
 
           {/* Wallet */}
           {activeView === 'wallet' && (
-            <WalletPage balance={balance} entries={walletEntries} onDeposit={() => setShowDeposit(true)} />
+            <WalletPage
+              balance={balance}
+              entries={walletEntries}
+              onDeposit={() => setShowDeposit(true)}
+              onWithdraw={() => setShowWithdraw(true)}
+            />
           )}
 
           {/* Profile & account pages */}
@@ -2031,7 +2053,7 @@ function PolkaAppInner() {
           <div className="flex gap-3 ml-auto flex-wrap">
             {[
               { label: 'Terms', action: () => setShowTerms(true) },
-              { label: 'How It Works', action: () => {} },
+              { label: 'How It Works', action: () => setShowTutorial(true) },
               { label: 'FAQ', action: () => {} },
             ].map(({ label, action }) => (
               <button key={label} onClick={action} className="text-[10px] uppercase tracking-wider whitespace-nowrap transition-colors hover:opacity-80" style={{ fontFamily: 'Barlow Condensed, sans-serif', color: `${WARM}35` }}>
@@ -2085,7 +2107,28 @@ function PolkaAppInner() {
       {showTerms && <TermsView onClose={() => setShowTerms(false)} />}
       {showSignIn && <SignInModal onClose={() => setShowSignIn(false)} onSuccess={() => { setIsSignedIn(true); setShowSignIn(false) }} />}
       {showDeposit && <DepositModal onClose={() => setShowDeposit(false)} onDeposit={handleDeposit} />}
+      {showWithdraw && <WithdrawModal balance={balance} onClose={() => setShowWithdraw(false)} onWithdraw={handleWithdraw} />}
+      {showTutorial && (
+        <Tutorial
+          onClose={() => setShowTutorial(false)}
+          onRegister={() => { setShowTutorial(false); setShowSignIn(true) }}
+          onBrowse={() => { setShowTutorial(false); setActiveView('markets') }}
+        />
+      )}
       {showCustomCat && <CustomCategoryModal onClose={() => setShowCustomCat(false)} onCreate={c => setCustomCategories(cs => [...cs, c])} />}
     </div>
+  )
+}
+
+export function PolkaApp() {
+  return (
+    <OddsProvider>
+      <LiveProvider>
+        <ToastProvider>
+          <DisplayKeyframes />
+          <PolkaAppInner />
+        </ToastProvider>
+      </LiveProvider>
+    </OddsProvider>
   )
 }
