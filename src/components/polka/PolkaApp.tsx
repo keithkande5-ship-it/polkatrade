@@ -2010,7 +2010,7 @@ function PolkaAppInner() {
             <WalletPage
               balance={balance}
               entries={walletEntries}
-              onDeposit={() => setShowDeposit(true)}
+              onDeposit={() => requireAuth("Sign in to deposit funds", () => setShowDeposit(true))}
               onWithdraw={() => setShowWithdraw(true)}
             />
           )}
@@ -2114,8 +2114,8 @@ function PolkaAppInner() {
         onNavigate={setActiveView}
         onSignIn={() => setShowSignIn(true)}
         onSignOut={() => setIsSignedIn(false)}
-        onDeposit={() => setShowDeposit(true)}
-        onCreate={() => setShowCreate(true)}
+        onDeposit={() => requireAuth("Sign in to deposit funds", () => setShowDeposit(true))}
+        onCreate={() => requireAuth("Sign in to create a market", () => setShowCreate(true))}
         activeView={activeView}
       />
 
@@ -2126,7 +2126,7 @@ function PolkaAppInner() {
           onClose={() => setSelectedMarket(null)}
           comboPositions={comboPositions}
           onAddToCombo={(market, position, odds, amount) => addToCombo(market, position, odds, amount)}
-          onConfirm={confirmTrade}
+          onConfirm={(...a: Parameters<typeof confirmTrade>) => requireAuth("Sign in to place a prediction", () => confirmTrade(...a))}
           myTrades={portfolio}
         />
       )}
