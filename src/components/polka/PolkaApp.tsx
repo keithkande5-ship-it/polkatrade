@@ -2119,8 +2119,20 @@ function PolkaAppInner() {
       )}
       {showCreate && <CreateMarket onClose={() => setShowCreate(false)} />}
       {showTerms && <TermsView onClose={() => setShowTerms(false)} />}
-      {showSignIn && <SignInModal onClose={() => setShowSignIn(false)} onSuccess={() => { setIsSignedIn(true); setShowSignIn(false) }} />}
-      {showDeposit && <DepositModal onClose={() => setShowDeposit(false)} onDeposit={handleDeposit} />}
+      {(showSignIn || authPrompt !== null) && (
+        <AuthModal
+          reason={authPrompt ?? undefined}
+          onClose={() => { setShowSignIn(false); setAuthPrompt(null) }}
+          onSuccess={p => { setIsSignedIn(true); setUserPhone(p.phone); setShowSignIn(false); setAuthPrompt(null); push(`Welcome, ${p.name}`) }}
+        />
+      )}
+      {showDeposit && (
+        <DepositModal
+          savedPhone={userPhone || undefined}
+          onClose={() => setShowDeposit(false)}
+          onDeposit={(amount, phone) => { setUserPhone(phone); handleDeposit(amount); push('Deposit confirmed — balance updated') }}
+        />
+      )}
       {showWithdraw && <WithdrawModal balance={balance} onClose={() => setShowWithdraw(false)} onWithdraw={handleWithdraw} />}
       {showTutorial && (
         <Tutorial
