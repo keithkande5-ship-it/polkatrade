@@ -2074,7 +2074,20 @@ function PolkaAppInner() {
                 {label}
               </button>
             ))}
+            <a
+              href="https://wa.me/254741301508"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1 text-[10px] uppercase tracking-wider whitespace-nowrap hover:opacity-80"
+              style={{ fontFamily: 'Barlow Condensed, sans-serif', color: '#25D366' }}
+            >
+              <MessageCircle size={11} /> WhatsApp Support
+            </a>
           </div>
+        </div>
+        <div className="mt-2 inline-flex items-center gap-1.5 px-2 py-1" style={{ borderRadius: 3, border: `1px solid ${WARM}25`, color: `${WARM}55`, fontFamily: 'Barlow Condensed, sans-serif' }}>
+          <ShieldCheck size={12} />
+          <span className="text-[10px] uppercase tracking-wider font-700">18+ · Participate responsibly</span>
         </div>
         <p className="text-[10px] mt-1.5" style={{ color: `${WARM}18` }}>
           Prediction market — not a sportsbook, casino, or bookmaker · Parimutuel payouts · 2% platform fee · 18+ · © 2025 Polka.trade
