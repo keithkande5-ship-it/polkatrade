@@ -1157,13 +1157,50 @@ function PortfolioPage({ trades, balance, isSignedIn, onNavigate, onSignIn, onOp
 
 // ─── Wallet Page ──────────────────────────────────────────────────────────────
 
+type WalletFilter = 'all' | 'deposits' | 'withdrawals' | 'trades' | 'winnings' | 'pending'
+
+const WALLET_FILTERS: { id: WalletFilter; label: string; match: (e: WalletEntry) => boolean }[] = [
+  { id: 'all', label: 'All', match: () => true },
+  { id: 'deposits', label: 'Deposits', match: e => e.type === 'deposit' },
+  { id: 'withdrawals', label: 'Withdrawals', match: e => e.type === 'withdrawal' },
+  { id: 'trades', label: 'Trades', match: e => e.type === 'bet' || e.type === 'combo' || e.type === 'seed' },
+  { id: 'winnings', label: 'Winnings', match: e => e.type === 'win' },
+  { id: 'pending', label: 'Pending', match: e => e.status === 'pending' },
+]
+
+const TYPE_LABELS: Record<string, string> = {
+  deposit: 'Deposit', withdrawal: 'Withdrawal', bet: 'Prediction',
+  win: 'Winnings', seed: 'Market seed', combo: 'Multi-prediction', loss: 'Loss',
+}
+
 function WalletPage({ balance, entries, onDeposit, onWithdraw }: { balance: number; entries: WalletEntry[]; onDeposit: () => void; onWithdraw: () => void }) {
-  const TYPE_ICONS: Record<string, string> = { deposit: '↓', withdrawal: '↑', bet: '→', win: '★', seed: '⊞', combo: '≡', loss: '✗' }
-  const TYPE_COLORS: Record<string, string> = { deposit: '#2A6B3A', win: '#2A6B3A', withdrawal: ORANGE, bet: NAVY, seed: NAVY, combo: '#6B21A8', loss: ORANGE }
+  const [filter, setFilter] = useState<WalletFilter>('all')
+  const rows = entries.filter(e => (WALLET_FILTERS.find(f => f.id === filter) ?? WALLET_FILTERS[0]!).match(e))
+
+  const statusPill = (status: WalletEntry['status']) => (
+    <span
+      style={{
+        fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3,
+        background: status === 'completed' ? '#2A6B3A18' : `${ORANGE}18`,
+        color: status === 'completed' ? '#2A6B3A' : ORANGE,
+        border: `1px solid ${status === 'completed' ? '#2A6B3A' : ORANGE}35`,
+      }}
+      className="px-2 py-0.5 text-[10px] font-700 uppercase tracking-wider"
+    >
+      {status === 'completed' ? 'Completed' : 'Pending'}
+    </span>
+  )
+
+  const amountEl = (e: WalletEntry) => (
+    <span style={{ fontFamily: 'Geist Mono, monospace', color: e.sign === '+' ? '#2A6B3A' : ORANGE, fontWeight: 700 }} className="text-sm whitespace-nowrap">
+      {e.sign}{formatKES(e.amount)}
+    </span>
+  )
+
   return (
     <div className="flex-1 overflow-y-auto">
       <div className="border-b p-4" style={{ background: NAVY }}>
-        <div className="flex items-end justify-between">
+        <div className="flex items-end justify-between flex-wrap gap-3">
           <div>
             <div style={{ fontFamily: 'Barlow Condensed, sans-serif' }} className="text-[10px] uppercase tracking-widest text-white/40 font-600">Available Balance</div>
             <div style={{ fontFamily: 'Barlow Condensed, sans-serif', color: '#F7D000' }} className="text-3xl font-700 mt-1">{formatKES(balance)}</div>
@@ -1174,25 +1211,77 @@ function WalletPage({ balance, entries, onDeposit, onWithdraw }: { balance: numb
           </div>
         </div>
       </div>
-      <div className="px-4 py-2 border-b" style={{ background: MINERAL, borderColor: `${NAVY}15` }}>
-        <span style={{ fontFamily: 'Barlow Condensed, sans-serif', color: `${NAVY}45` }} className="text-[10px] uppercase tracking-widest font-600">Transaction Ledger</span>
+
+      {/* Filter pills */}
+      <div className="px-3 py-2.5 border-b overflow-x-auto" style={{ background: MINERAL, borderColor: `${NAVY}15` }}>
+        <div className="flex gap-1.5 min-w-max">
+          {WALLET_FILTERS.map(f => {
+            const count = entries.filter(f.match).length
+            const active = filter === f.id
+            return (
+              <button
+                key={f.id}
+                onClick={() => setFilter(f.id)}
+                style={{
+                  fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3,
+                  boxShadow: active ? BV_DK : BV_UP,
+                  background: active ? NAVY : WARM,
+                  color: active ? WARM : `${NAVY}65`,
+                  border: `1px solid ${active ? NAVY : NAVY + '18'}`,
+                }}
+                className="px-3 py-1.5 text-xs font-700 uppercase tracking-wider transition-all flex items-center gap-1.5 whitespace-nowrap"
+              >
+                {f.label}
+                <span style={{ fontFamily: 'Geist Mono, monospace', opacity: 0.7 }} className="text-[10px]">{count}</span>
+              </button>
+            )
+          })}
+        </div>
       </div>
-      {entries.map((e, i) => (
-        <div key={e.id} className="flex items-center gap-3 px-4 py-3 border-b" style={{ background: i % 2 === 0 ? WARM : SKY, borderColor: `${NAVY}08` }}>
-          <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-700 shrink-0" style={{ background: `${TYPE_COLORS[e.type] ?? NAVY}18`, color: TYPE_COLORS[e.type] ?? NAVY }}>
-            {TYPE_ICONS[e.type] ?? '·'}
+
+      {/* Desktop table */}
+      <div className="hidden sm:block">
+        <div className="grid px-4 py-2 border-b" style={{ gridTemplateColumns: '110px minmax(0,1fr) 130px 110px 120px', background: SKY, borderColor: `${NAVY}12` }}>
+          {['Date', 'Transaction', 'Type', 'Status', 'Amount'].map((h, i) => (
+            <div key={h} style={{ fontFamily: 'Barlow Condensed, sans-serif', color: `${NAVY}55` }} className={`text-[10px] uppercase tracking-widest font-700 ${i === 4 ? 'text-right' : ''}`}>{h}</div>
+          ))}
+        </div>
+        {rows.map((e, i) => (
+          <div key={e.id} className="grid items-center px-4 py-3 border-b" style={{ gridTemplateColumns: '110px minmax(0,1fr) 130px 110px 120px', background: i % 2 === 0 ? WARM : `${SKY}60`, borderColor: `${NAVY}08` }}>
+            <div className="text-[11px]" style={{ color: `${NAVY}50`, fontFamily: 'Geist Mono, monospace' }}>{e.date}</div>
+            <div className="text-xs font-500 truncate pr-3" style={{ color: NAVY }}>{e.description}</div>
+            <div className="text-[11px] font-600" style={{ color: `${NAVY}70` }}>{TYPE_LABELS[e.type] ?? e.type}</div>
+            <div>{statusPill(e.status)}</div>
+            <div className="text-right">{amountEl(e)}</div>
           </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-xs font-500 truncate" style={{ color: NAVY }}>{e.description}</div>
-            <div className="text-[10px] mt-0.5" style={{ color: `${NAVY}40` }}>{e.date} · {e.status}</div>
-          </div>
-          <div className="text-right shrink-0">
-            <div style={{ fontFamily: 'Geist Mono, monospace', color: e.sign === '+' ? '#2A6B3A' : `${NAVY}70`, fontWeight: 700 }} className="text-sm">
-              {e.sign}{formatKES(e.amount)}
+        ))}
+      </div>
+
+      {/* Mobile records */}
+      <div className="sm:hidden">
+        {rows.map((e, i) => (
+          <div key={e.id} className="px-4 py-3 border-b space-y-2" style={{ background: i % 2 === 0 ? WARM : `${SKY}60`, borderColor: `${NAVY}08` }}>
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="text-xs font-600" style={{ color: NAVY }}>{e.description}</div>
+                <div className="text-[10px] mt-0.5" style={{ color: `${NAVY}45`, fontFamily: 'Geist Mono, monospace' }}>{e.date}</div>
+              </div>
+              {amountEl(e)}
+            </div>
+            <div className="flex items-center justify-between gap-2">
+              <span style={{ fontFamily: 'Barlow Condensed, sans-serif', color: `${NAVY}55` }} className="text-[10px] uppercase tracking-widest font-700">{TYPE_LABELS[e.type] ?? e.type}</span>
+              {statusPill(e.status)}
             </div>
           </div>
+        ))}
+      </div>
+
+      {rows.length === 0 && (
+        <div className="p-8 text-center">
+          <div className="text-xs" style={{ color: `${NAVY}45` }}>No transactions in this filter yet.</div>
+          <button onClick={onDeposit} style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, background: '#2A7B6F', boxShadow: BV_DK }} className="mt-3 px-4 py-2 text-xs font-700 uppercase tracking-wider text-white">Deposit funds</button>
         </div>
-      ))}
+      )}
     </div>
   )
 }
