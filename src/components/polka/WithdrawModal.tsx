@@ -18,7 +18,9 @@ export function WithdrawModal({ balance, onClose, onWithdraw }: {
   const [phone, setPhone] = useState('+254 712 345 678')
   const PRESETS = [500, 1000, 2500, 5000]
   const value = Number(amount)
-  const tooMuch = value > balance
+  const fee = value > 0 ? getWithdrawalFee(value) : 0
+  const net = Math.max(0, value - fee)
+  const tooMuch = value + fee > balance
   const tooSmall = value > 0 && value < 100
   const valid = value >= 100 && !tooMuch && phone.replace(/\D/g, '').length >= 9
 
