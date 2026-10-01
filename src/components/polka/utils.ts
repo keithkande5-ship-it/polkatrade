@@ -10,6 +10,33 @@ export function formatKES(v: number): string {
   return `KES ${v.toLocaleString()}`
 }
 
+// ─── PalPluss withdrawal fee schedule (KES) ───────────────────────────────────
+
+const WITHDRAWAL_FEE_TIERS: { max: number; fee: number }[] = [
+  { max: 499, fee: 12 },
+  { max: 999, fee: 18 },
+  { max: 1499, fee: 23 },
+  { max: 2499, fee: 30 },
+  { max: 3499, fee: 33 },
+  { max: 4999, fee: 40 },
+  { max: 7499, fee: 50 },
+  { max: 9999, fee: 55 },
+  { max: 14999, fee: 65 },
+  { max: 19999, fee: 85 },
+  { max: 34999, fee: 110 },
+  { max: 49999, fee: 150 },
+  { max: 149999, fee: 170 },
+  { max: 249999, fee: 200 },
+]
+
+export function getWithdrawalFee(amount: number): number {
+  if (!Number.isFinite(amount) || amount < 50) return 0
+  for (const tier of WITHDRAWAL_FEE_TIERS) {
+    if (amount <= tier.max) return tier.fee
+  }
+  return Math.round(amount * 0.02)
+}
+
 // Hide volume/trader count for thin markets
 export function shouldHideStats(volume: number, participants: number): boolean {
   return volume < 1_000 || participants < 10
