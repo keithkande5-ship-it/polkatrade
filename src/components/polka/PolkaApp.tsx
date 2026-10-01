@@ -10,6 +10,9 @@ import {
 } from './display'
 import { Tutorial } from './Tutorial'
 import { WithdrawModal } from './WithdrawModal'
+import { DepositModal } from './DepositModal'
+import { AuthModal } from './AuthModal'
+import { ShieldCheck, MessageCircle } from 'lucide-react'
 
 // ─── Style constants ──────────────────────────────────────────────────────────
 const BV_UP   = '0 1px 0 rgba(255,255,255,0.55) inset, 0 -1px 0 rgba(0,0,0,0.10) inset'
@@ -814,101 +817,6 @@ function MarketDetail({ market: baseMarket, onClose, comboPositions, onAddToComb
 }
 
 
-// ─── Sign-In Modal ────────────────────────────────────────────────────────────
-
-function SignInModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
-  const [mode, setMode] = useState<'signin' | 'signup'>('signin')
-  const [phone, setPhone] = useState('')
-  const [password, setPassword] = useState('')
-  const [name, setName] = useState('')
-  const TEAL = '#1A5C52'; const TEAL_L = '#2A7B6F'
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" style={{ background: `${NAVY}60` }} onClick={onClose}>
-      <div className="w-full sm:max-w-sm overflow-hidden" style={{ background: '#fff', borderRadius: 4, border: `1px solid ${TEAL}33`, boxShadow: '0 24px 64px rgba(21,43,67,0.22)' }} onClick={e => e.stopPropagation()}>
-        <div className="px-5 py-5" style={{ background: TEAL, boxShadow: BV_DK }}>
-          <div className="flex justify-between items-start">
-            <div>
-              <div style={{ fontFamily: 'Barlow Condensed, sans-serif' }} className="text-[10px] uppercase tracking-widest font-600 text-white/50">POLKA<span style={{ color: '#F7D000' }}>.TRADE</span></div>
-              <div style={{ fontFamily: 'Barlow Condensed, sans-serif' }} className="text-xl font-700 text-white mt-1">{mode === 'signin' ? 'Welcome back' : 'Join Polka.trade'}</div>
-              <div className="text-white/50 text-xs mt-0.5">{mode === 'signin' ? 'Sign in to trade' : 'Start predicting in minutes'}</div>
-            </div>
-            <button onClick={onClose} className="text-white/40 hover:text-white text-2xl w-8 h-8 flex items-center justify-center">×</button>
-          </div>
-          <div className="flex mt-4 p-0.5" style={{ borderRadius: 4, background: 'rgba(0,0,0,0.15)', border: '1px solid rgba(255,255,255,0.15)' }}>
-            {(['signin', 'signup'] as const).map(m => (
-              <button key={m} onClick={() => setMode(m)} style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, boxShadow: mode === m ? BV_DK : 'none', background: mode === m ? '#fff' : 'transparent', color: mode === m ? TEAL : 'rgba(255,255,255,0.6)' }} className="flex-1 py-1.5 text-sm font-700 uppercase tracking-wider transition-all">
-                {m === 'signin' ? 'Sign In' : 'Register'}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="p-5 space-y-3" style={{ background: '#FAFDFB' }}>
-          {mode === 'signup' && (
-            <div>
-              <label className="block text-[11px] font-600 uppercase tracking-wider mb-1.5" style={{ color: TEAL, fontFamily: 'Barlow Condensed, sans-serif' }}>Full Name</label>
-              <input value={name} onChange={e => setName(e.target.value)} placeholder="Njeri Kamau" className="w-full border px-3 py-2.5 text-sm outline-none" style={{ borderColor: `${TEAL}33`, borderRadius: 3, boxShadow: BV_IN, background: '#fff', color: NAVY }} />
-            </div>
-          )}
-          <div>
-            <label className="block text-[11px] font-600 uppercase tracking-wider mb-1.5" style={{ color: TEAL, fontFamily: 'Barlow Condensed, sans-serif' }}>Phone / Email</label>
-            <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="+254 700 000 000" className="w-full border px-3 py-2.5 text-sm outline-none" style={{ borderColor: `${TEAL}33`, borderRadius: 3, boxShadow: BV_IN, background: '#fff', color: NAVY, fontFamily: 'Geist Mono, monospace' }} />
-          </div>
-          <div>
-            <label className="block text-[11px] font-600 uppercase tracking-wider mb-1.5" style={{ color: TEAL, fontFamily: 'Barlow Condensed, sans-serif' }}>Password</label>
-            <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" className="w-full border px-3 py-2.5 text-sm outline-none" style={{ borderColor: `${TEAL}33`, borderRadius: 3, boxShadow: BV_IN, background: '#fff', color: NAVY, fontFamily: 'Geist Mono, monospace' }} />
-          </div>
-          {mode === 'signin' && <div className="text-right"><button className="text-[11px] hover:underline" style={{ color: TEAL_L }}>Forgot password?</button></div>}
-          <button onClick={onSuccess} style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, background: TEAL, boxShadow: BV_DK }} className="w-full py-3 text-sm font-700 uppercase tracking-wider text-white hover:brightness-110 transition-all mt-1">{mode === 'signin' ? 'Sign In' : 'Create Account'}</button>
-          <div className="flex items-center gap-2 my-1"><div className="flex-1 h-px bg-gray-200" /><span className="text-[10px] text-gray-400 uppercase tracking-wider">or</span><div className="flex-1 h-px bg-gray-200" /></div>
-          <button style={{ color: NAVY, borderRadius: 3, border: `1.5px solid ${TEAL}33`, boxShadow: BV_IN }} className="w-full py-2.5 text-sm font-600 bg-white hover:bg-[#E8F2F0] transition-colors flex items-center justify-center gap-2">
-            <span style={{ fontFamily: 'Barlow Condensed, sans-serif', color: TEAL_L }} className="font-700 text-base">M</span>
-            <span style={{ fontFamily: 'Barlow Condensed, sans-serif' }} className="font-600">M-PESA OTP</span>
-          </button>
-          {mode === 'signup' && <p className="text-[10px] text-gray-400 text-center leading-relaxed pt-1">18+ only · Prediction market, not a bookmaker</p>}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// ─── Deposit Modal ────────────────────────────────────────────────────────────
-
-function DepositModal({ onClose, onDeposit }: { onClose: () => void; onDeposit: (amount: number) => void }) {
-  const [amount, setAmount] = useState('')
-  const PRESETS = [500, 1000, 2000, 5000]
-  return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" style={{ background: `${NAVY}60` }} onClick={onClose}>
-      <div className="w-full sm:max-w-sm overflow-hidden" style={{ background: WARM, borderRadius: 4, border: `1px solid ${NAVY}18`, boxShadow: '0 24px 64px rgba(21,43,67,0.2)' }} onClick={e => e.stopPropagation()}>
-        <div className="px-4 py-4 flex items-center justify-between" style={{ background: NAVY, boxShadow: BV_DK }}>
-          <div>
-            <div style={{ fontFamily: 'Barlow Condensed, sans-serif' }} className="text-[10px] uppercase tracking-widest text-white/40 font-600">Wallet</div>
-            <div style={{ fontFamily: 'Barlow Condensed, sans-serif' }} className="text-lg font-700 text-white mt-0.5">Deposit Funds</div>
-          </div>
-          <button onClick={onClose} className="text-white/40 hover:text-white text-2xl w-8 h-8 flex items-center justify-center">×</button>
-        </div>
-        <div className="p-5 space-y-4">
-          <div className="flex gap-2 flex-wrap">
-            {PRESETS.map(p => (
-              <button key={p} onClick={() => setAmount(String(p))} style={{ borderRadius: 3, boxShadow: amount === String(p) ? BV_DK : BV_UP, background: amount === String(p) ? NAVY : WARM, color: amount === String(p) ? WARM : NAVY, border: `1px solid ${NAVY}${amount === String(p) ? 'ff' : '18'}`, fontFamily: 'Barlow Condensed, sans-serif' }} className="px-3 py-1.5 text-sm font-700 transition-all">
-                {formatKES(p)}
-              </button>
-            ))}
-          </div>
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-600 pointer-events-none" style={{ color: `${NAVY}45` }}>KES</span>
-            <input type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="Enter amount" className="w-full border pl-10 pr-3 py-3 text-sm outline-none" style={{ borderRadius: 3, fontFamily: 'Geist Mono, monospace', boxShadow: BV_IN, background: MINERAL, color: NAVY, borderColor: `${NAVY}20` }} />
-          </div>
-          <button onClick={() => { if (Number(amount) > 0) { onDeposit(Number(amount)); onClose() } }} style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, background: '#2A7B6F', boxShadow: BV_DK }} className="w-full py-3 text-sm font-700 uppercase tracking-wider text-white hover:brightness-110 transition-all">
-            Deposit via M-PESA
-          </button>
-          <p className="text-[10px] text-center" style={{ color: `${NAVY}35` }}>You will receive an M-PESA STK push to confirm.</p>
-        </div>
-      </div>
-    </div>
-  )
-}
-
 // ─── Create Market ────────────────────────────────────────────────────────────
 
 function CreateMarket({ onClose }: { onClose: () => void }) {
@@ -1249,13 +1157,50 @@ function PortfolioPage({ trades, balance, isSignedIn, onNavigate, onSignIn, onOp
 
 // ─── Wallet Page ──────────────────────────────────────────────────────────────
 
+type WalletFilter = 'all' | 'deposits' | 'withdrawals' | 'trades' | 'winnings' | 'pending'
+
+const WALLET_FILTERS: { id: WalletFilter; label: string; match: (e: WalletEntry) => boolean }[] = [
+  { id: 'all', label: 'All', match: () => true },
+  { id: 'deposits', label: 'Deposits', match: e => e.type === 'deposit' },
+  { id: 'withdrawals', label: 'Withdrawals', match: e => e.type === 'withdrawal' },
+  { id: 'trades', label: 'Trades', match: e => e.type === 'bet' || e.type === 'combo' || e.type === 'seed' },
+  { id: 'winnings', label: 'Winnings', match: e => e.type === 'win' },
+  { id: 'pending', label: 'Pending', match: e => e.status === 'pending' },
+]
+
+const TYPE_LABELS: Record<string, string> = {
+  deposit: 'Deposit', withdrawal: 'Withdrawal', bet: 'Prediction',
+  win: 'Winnings', seed: 'Market seed', combo: 'Multi-prediction', loss: 'Loss',
+}
+
 function WalletPage({ balance, entries, onDeposit, onWithdraw }: { balance: number; entries: WalletEntry[]; onDeposit: () => void; onWithdraw: () => void }) {
-  const TYPE_ICONS: Record<string, string> = { deposit: '↓', withdrawal: '↑', bet: '→', win: '★', seed: '⊞', combo: '≡', loss: '✗' }
-  const TYPE_COLORS: Record<string, string> = { deposit: '#2A6B3A', win: '#2A6B3A', withdrawal: ORANGE, bet: NAVY, seed: NAVY, combo: '#6B21A8', loss: ORANGE }
+  const [filter, setFilter] = useState<WalletFilter>('all')
+  const rows = entries.filter(e => (WALLET_FILTERS.find(f => f.id === filter) ?? WALLET_FILTERS[0]!).match(e))
+
+  const statusPill = (status: WalletEntry['status']) => (
+    <span
+      style={{
+        fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3,
+        background: status === 'completed' ? '#2A6B3A18' : `${ORANGE}18`,
+        color: status === 'completed' ? '#2A6B3A' : ORANGE,
+        border: `1px solid ${status === 'completed' ? '#2A6B3A' : ORANGE}35`,
+      }}
+      className="px-2 py-0.5 text-[10px] font-700 uppercase tracking-wider"
+    >
+      {status === 'completed' ? 'Completed' : 'Pending'}
+    </span>
+  )
+
+  const amountEl = (e: WalletEntry) => (
+    <span style={{ fontFamily: 'Geist Mono, monospace', color: e.sign === '+' ? '#2A6B3A' : ORANGE, fontWeight: 700 }} className="text-sm whitespace-nowrap">
+      {e.sign}{formatKES(e.amount)}
+    </span>
+  )
+
   return (
     <div className="flex-1 overflow-y-auto">
       <div className="border-b p-4" style={{ background: NAVY }}>
-        <div className="flex items-end justify-between">
+        <div className="flex items-end justify-between flex-wrap gap-3">
           <div>
             <div style={{ fontFamily: 'Barlow Condensed, sans-serif' }} className="text-[10px] uppercase tracking-widest text-white/40 font-600">Available Balance</div>
             <div style={{ fontFamily: 'Barlow Condensed, sans-serif', color: '#F7D000' }} className="text-3xl font-700 mt-1">{formatKES(balance)}</div>
@@ -1266,25 +1211,77 @@ function WalletPage({ balance, entries, onDeposit, onWithdraw }: { balance: numb
           </div>
         </div>
       </div>
-      <div className="px-4 py-2 border-b" style={{ background: MINERAL, borderColor: `${NAVY}15` }}>
-        <span style={{ fontFamily: 'Barlow Condensed, sans-serif', color: `${NAVY}45` }} className="text-[10px] uppercase tracking-widest font-600">Transaction Ledger</span>
+
+      {/* Filter pills */}
+      <div className="px-3 py-2.5 border-b overflow-x-auto" style={{ background: MINERAL, borderColor: `${NAVY}15` }}>
+        <div className="flex gap-1.5 min-w-max">
+          {WALLET_FILTERS.map(f => {
+            const count = entries.filter(f.match).length
+            const active = filter === f.id
+            return (
+              <button
+                key={f.id}
+                onClick={() => setFilter(f.id)}
+                style={{
+                  fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3,
+                  boxShadow: active ? BV_DK : BV_UP,
+                  background: active ? NAVY : WARM,
+                  color: active ? WARM : `${NAVY}65`,
+                  border: `1px solid ${active ? NAVY : NAVY + '18'}`,
+                }}
+                className="px-3 py-1.5 text-xs font-700 uppercase tracking-wider transition-all flex items-center gap-1.5 whitespace-nowrap"
+              >
+                {f.label}
+                <span style={{ fontFamily: 'Geist Mono, monospace', opacity: 0.7 }} className="text-[10px]">{count}</span>
+              </button>
+            )
+          })}
+        </div>
       </div>
-      {entries.map((e, i) => (
-        <div key={e.id} className="flex items-center gap-3 px-4 py-3 border-b" style={{ background: i % 2 === 0 ? WARM : SKY, borderColor: `${NAVY}08` }}>
-          <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-700 shrink-0" style={{ background: `${TYPE_COLORS[e.type] ?? NAVY}18`, color: TYPE_COLORS[e.type] ?? NAVY }}>
-            {TYPE_ICONS[e.type] ?? '·'}
+
+      {/* Desktop table */}
+      <div className="hidden sm:block">
+        <div className="grid px-4 py-2 border-b" style={{ gridTemplateColumns: '110px minmax(0,1fr) 130px 110px 120px', background: SKY, borderColor: `${NAVY}12` }}>
+          {['Date', 'Transaction', 'Type', 'Status', 'Amount'].map((h, i) => (
+            <div key={h} style={{ fontFamily: 'Barlow Condensed, sans-serif', color: `${NAVY}55` }} className={`text-[10px] uppercase tracking-widest font-700 ${i === 4 ? 'text-right' : ''}`}>{h}</div>
+          ))}
+        </div>
+        {rows.map((e, i) => (
+          <div key={e.id} className="grid items-center px-4 py-3 border-b" style={{ gridTemplateColumns: '110px minmax(0,1fr) 130px 110px 120px', background: i % 2 === 0 ? WARM : `${SKY}60`, borderColor: `${NAVY}08` }}>
+            <div className="text-[11px]" style={{ color: `${NAVY}50`, fontFamily: 'Geist Mono, monospace' }}>{e.date}</div>
+            <div className="text-xs font-500 truncate pr-3" style={{ color: NAVY }}>{e.description}</div>
+            <div className="text-[11px] font-600" style={{ color: `${NAVY}70` }}>{TYPE_LABELS[e.type] ?? e.type}</div>
+            <div>{statusPill(e.status)}</div>
+            <div className="text-right">{amountEl(e)}</div>
           </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-xs font-500 truncate" style={{ color: NAVY }}>{e.description}</div>
-            <div className="text-[10px] mt-0.5" style={{ color: `${NAVY}40` }}>{e.date} · {e.status}</div>
-          </div>
-          <div className="text-right shrink-0">
-            <div style={{ fontFamily: 'Geist Mono, monospace', color: e.sign === '+' ? '#2A6B3A' : `${NAVY}70`, fontWeight: 700 }} className="text-sm">
-              {e.sign}{formatKES(e.amount)}
+        ))}
+      </div>
+
+      {/* Mobile records */}
+      <div className="sm:hidden">
+        {rows.map((e, i) => (
+          <div key={e.id} className="px-4 py-3 border-b space-y-2" style={{ background: i % 2 === 0 ? WARM : `${SKY}60`, borderColor: `${NAVY}08` }}>
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="text-xs font-600" style={{ color: NAVY }}>{e.description}</div>
+                <div className="text-[10px] mt-0.5" style={{ color: `${NAVY}45`, fontFamily: 'Geist Mono, monospace' }}>{e.date}</div>
+              </div>
+              {amountEl(e)}
+            </div>
+            <div className="flex items-center justify-between gap-2">
+              <span style={{ fontFamily: 'Barlow Condensed, sans-serif', color: `${NAVY}55` }} className="text-[10px] uppercase tracking-widest font-700">{TYPE_LABELS[e.type] ?? e.type}</span>
+              {statusPill(e.status)}
             </div>
           </div>
+        ))}
+      </div>
+
+      {rows.length === 0 && (
+        <div className="p-8 text-center">
+          <div className="text-xs" style={{ color: `${NAVY}45` }}>No transactions in this filter yet.</div>
+          <button onClick={onDeposit} style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, background: '#2A7B6F', boxShadow: BV_DK }} className="mt-3 px-4 py-2 text-xs font-700 uppercase tracking-wider text-white">Deposit funds</button>
         </div>
-      ))}
+      )}
     </div>
   )
 }
@@ -1525,7 +1522,13 @@ function PolkaAppInner() {
   const [showTutorial, setShowTutorial] = useState(false)
   const [showWithdraw, setShowWithdraw] = useState(false)
   // Auth & balance
-  const [isSignedIn, setIsSignedIn] = useState(true) // mock signed in
+  const [isSignedIn, setIsSignedIn] = useState(false)
+  const [userPhone, setUserPhone] = useState('')
+  const [authPrompt, setAuthPrompt] = useState<string | null>(null)
+  const requireAuth = (reason: string, fn: () => void) => {
+    if (!isSignedIn) { setAuthPrompt(reason); return }
+    fn()
+  }
   const [balance, setBalance] = useState(MOCK_PROFILE.balance)
 
   // Navigation
@@ -1755,13 +1758,15 @@ function PolkaAppInner() {
           {/* Right */}
           <div className="flex items-center gap-1.5 ml-auto shrink-0">
             <OddsToggle />
-            <button
-              onClick={() => setActiveView('wallet')}
-              style={{ fontFamily: 'Geist Mono, monospace', borderRadius: 3, boxShadow: BV_DK, background: '#F7D000', color: '#6B21A8' }}
-              className="px-3 py-1.5 text-xs sm:text-sm font-700 whitespace-nowrap hover:brightness-110 transition-all active:scale-95"
-            >
-              Bal. {balance.toFixed(2)} KSH
-            </button>
+            {isSignedIn && (
+              <button
+                onClick={() => setActiveView('wallet')}
+                style={{ fontFamily: 'Geist Mono, monospace', borderRadius: 3, boxShadow: BV_DK, background: '#F7D000', color: '#6B21A8' }}
+                className="px-3 py-1.5 text-xs sm:text-sm font-700 whitespace-nowrap hover:brightness-110 transition-all active:scale-95"
+              >
+                Bal. {balance.toFixed(2)} KSH
+              </button>
+            )}
             {isSignedIn ? (
               <button
                 onClick={() => setShowDeposit(true)}
@@ -1771,13 +1776,22 @@ function PolkaAppInner() {
                 Deposit
               </button>
             ) : (
-              <button
-                onClick={() => setShowSignIn(true)}
-                style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, border: '1px solid rgba(255,255,255,0.18)' }}
-                className="px-3 py-1.5 text-sm font-600 text-white hover:bg-white/10 transition-colors"
-              >
-                Sign In
-              </button>
+              <>
+                <button
+                  onClick={() => setShowSignIn(true)}
+                  style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, border: '1px solid rgba(255,255,255,0.18)' }}
+                  className="px-3 py-1.5 text-sm font-600 text-white hover:bg-white/10 transition-colors"
+                >
+                  Sign In
+                </button>
+                <button
+                  onClick={() => setAuthPrompt('Create your account to start predicting')}
+                  style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, boxShadow: BV_DK, background: '#2A9D4A' }}
+                  className="px-3 py-1.5 text-sm font-700 uppercase tracking-wider text-white hover:brightness-110 transition-all"
+                >
+                  Register
+                </button>
+              </>
             )}
             {/* Hamburger */}
             <button
@@ -1996,7 +2010,7 @@ function PolkaAppInner() {
             <WalletPage
               balance={balance}
               entries={walletEntries}
-              onDeposit={() => setShowDeposit(true)}
+              onDeposit={() => requireAuth("Sign in to deposit funds", () => setShowDeposit(true))}
               onWithdraw={() => setShowWithdraw(true)}
             />
           )}
@@ -2060,7 +2074,20 @@ function PolkaAppInner() {
                 {label}
               </button>
             ))}
+            <a
+              href="https://wa.me/254741301508"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1 text-[10px] uppercase tracking-wider whitespace-nowrap hover:opacity-80"
+              style={{ fontFamily: 'Barlow Condensed, sans-serif', color: '#25D366' }}
+            >
+              <MessageCircle size={11} /> WhatsApp Support
+            </a>
           </div>
+        </div>
+        <div className="mt-2 inline-flex items-center gap-1.5 px-2 py-1" style={{ borderRadius: 3, border: `1px solid ${WARM}25`, color: `${WARM}55`, fontFamily: 'Barlow Condensed, sans-serif' }}>
+          <ShieldCheck size={12} />
+          <span className="text-[10px] uppercase tracking-wider font-700">18+ · Participate responsibly</span>
         </div>
         <p className="text-[10px] mt-1.5" style={{ color: `${WARM}18` }}>
           Prediction market — not a sportsbook, casino, or bookmaker · Parimutuel payouts · 2% platform fee · 18+ · © 2025 Polka.trade
@@ -2087,8 +2114,8 @@ function PolkaAppInner() {
         onNavigate={setActiveView}
         onSignIn={() => setShowSignIn(true)}
         onSignOut={() => setIsSignedIn(false)}
-        onDeposit={() => setShowDeposit(true)}
-        onCreate={() => setShowCreate(true)}
+        onDeposit={() => requireAuth("Sign in to deposit funds", () => setShowDeposit(true))}
+        onCreate={() => requireAuth("Sign in to create a market", () => setShowCreate(true))}
         activeView={activeView}
       />
 
@@ -2099,14 +2126,26 @@ function PolkaAppInner() {
           onClose={() => setSelectedMarket(null)}
           comboPositions={comboPositions}
           onAddToCombo={(market, position, odds, amount) => addToCombo(market, position, odds, amount)}
-          onConfirm={confirmTrade}
+          onConfirm={(...a: Parameters<typeof confirmTrade>) => requireAuth("Sign in to place a prediction", () => confirmTrade(...a))}
           myTrades={portfolio}
         />
       )}
       {showCreate && <CreateMarket onClose={() => setShowCreate(false)} />}
       {showTerms && <TermsView onClose={() => setShowTerms(false)} />}
-      {showSignIn && <SignInModal onClose={() => setShowSignIn(false)} onSuccess={() => { setIsSignedIn(true); setShowSignIn(false) }} />}
-      {showDeposit && <DepositModal onClose={() => setShowDeposit(false)} onDeposit={handleDeposit} />}
+      {(showSignIn || authPrompt !== null) && (
+        <AuthModal
+          reason={authPrompt ?? undefined}
+          onClose={() => { setShowSignIn(false); setAuthPrompt(null) }}
+          onSuccess={p => { setIsSignedIn(true); setUserPhone(p.phone); setShowSignIn(false); setAuthPrompt(null); push(`Welcome, ${p.name}`) }}
+        />
+      )}
+      {showDeposit && (
+        <DepositModal
+          savedPhone={userPhone || undefined}
+          onClose={() => setShowDeposit(false)}
+          onDeposit={(amount, phone) => { setUserPhone(phone); handleDeposit(amount); push('Deposit confirmed — balance updated') }}
+        />
+      )}
       {showWithdraw && <WithdrawModal balance={balance} onClose={() => setShowWithdraw(false)} onWithdraw={handleWithdraw} />}
       {showTutorial && (
         <Tutorial
