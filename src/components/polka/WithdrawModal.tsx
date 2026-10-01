@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { X, Smartphone } from 'lucide-react'
-import { formatKES } from './utils'
+import { formatKES, getWithdrawalFee } from './utils'
 
 const BV_DK = '0 1px 0 rgba(255,255,255,0.08) inset, 0 -1px 0 rgba(0,0,0,0.20) inset'
 const BV_IN = '0 1px 3px rgba(21,43,67,0.10) inset, 0 1px 0 rgba(255,255,255,0.40)'
