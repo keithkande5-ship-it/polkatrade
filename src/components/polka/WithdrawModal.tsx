@@ -69,7 +69,24 @@ export function WithdrawModal({ balance, onClose, onWithdraw }: {
               style={{ borderRadius: 3, fontFamily: 'Geist Mono, monospace', boxShadow: BV_IN, background: MINERAL, color: NAVY, borderColor: `${NAVY}20` }} />
           </div>
 
-          {tooMuch && <p className="text-[11px]" style={{ color: '#8B1A1A' }}>Amount is higher than your available balance.</p>}
+          {value > 0 && (
+            <div className="space-y-1.5 border px-3 py-2.5" style={{ borderRadius: 3, background: MINERAL, borderColor: `${NAVY}15`, boxShadow: BV_IN }}>
+              <div className="flex justify-between text-[11px]">
+                <span style={{ color: `${NAVY}55` }}>Fee</span>
+                <span style={{ fontFamily: 'Geist Mono, monospace', color: NAVY }} className="font-700">{formatKES(fee)}</span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span style={{ color: `${NAVY}70` }} className="font-600">Net M-Pesa Payout</span>
+                <span style={{ fontFamily: 'Geist Mono, monospace', color: '#2A6B3A' }} className="font-700">{formatKES(net)}</span>
+              </div>
+              <div className="flex justify-between text-[10px]">
+                <span style={{ color: `${NAVY}40` }}>Total deducted</span>
+                <span style={{ fontFamily: 'Geist Mono, monospace', color: `${NAVY}55` }}>{formatKES(value + fee)}</span>
+              </div>
+            </div>
+          )}
+
+          {tooMuch && <p className="text-[11px]" style={{ color: '#8B1A1A' }}>Amount plus fee is higher than your available balance.</p>}
           {tooSmall && <p className="text-[11px]" style={{ color: '#8B1A1A' }}>Minimum withdrawal is KES 100.</p>}
 
           <button
