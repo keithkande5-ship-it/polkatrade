@@ -1522,7 +1522,13 @@ function PolkaAppInner() {
   const [showTutorial, setShowTutorial] = useState(false)
   const [showWithdraw, setShowWithdraw] = useState(false)
   // Auth & balance
-  const [isSignedIn, setIsSignedIn] = useState(true) // mock signed in
+  const [isSignedIn, setIsSignedIn] = useState(false)
+  const [userPhone, setUserPhone] = useState('')
+  const [authPrompt, setAuthPrompt] = useState<string | null>(null)
+  const requireAuth = (reason: string, fn: () => void) => {
+    if (!isSignedIn) { setAuthPrompt(reason); return }
+    fn()
+  }
   const [balance, setBalance] = useState(MOCK_PROFILE.balance)
 
   // Navigation
