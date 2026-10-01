@@ -1758,13 +1758,15 @@ function PolkaAppInner() {
           {/* Right */}
           <div className="flex items-center gap-1.5 ml-auto shrink-0">
             <OddsToggle />
-            <button
-              onClick={() => setActiveView('wallet')}
-              style={{ fontFamily: 'Geist Mono, monospace', borderRadius: 3, boxShadow: BV_DK, background: '#F7D000', color: '#6B21A8' }}
-              className="px-3 py-1.5 text-xs sm:text-sm font-700 whitespace-nowrap hover:brightness-110 transition-all active:scale-95"
-            >
-              Bal. {balance.toFixed(2)} KSH
-            </button>
+            {isSignedIn && (
+              <button
+                onClick={() => setActiveView('wallet')}
+                style={{ fontFamily: 'Geist Mono, monospace', borderRadius: 3, boxShadow: BV_DK, background: '#F7D000', color: '#6B21A8' }}
+                className="px-3 py-1.5 text-xs sm:text-sm font-700 whitespace-nowrap hover:brightness-110 transition-all active:scale-95"
+              >
+                Bal. {balance.toFixed(2)} KSH
+              </button>
+            )}
             {isSignedIn ? (
               <button
                 onClick={() => setShowDeposit(true)}
@@ -1774,13 +1776,22 @@ function PolkaAppInner() {
                 Deposit
               </button>
             ) : (
-              <button
-                onClick={() => setShowSignIn(true)}
-                style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, border: '1px solid rgba(255,255,255,0.18)' }}
-                className="px-3 py-1.5 text-sm font-600 text-white hover:bg-white/10 transition-colors"
-              >
-                Sign In
-              </button>
+              <>
+                <button
+                  onClick={() => setShowSignIn(true)}
+                  style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, border: '1px solid rgba(255,255,255,0.18)' }}
+                  className="px-3 py-1.5 text-sm font-600 text-white hover:bg-white/10 transition-colors"
+                >
+                  Sign In
+                </button>
+                <button
+                  onClick={() => setAuthPrompt('Create your account to start predicting')}
+                  style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, boxShadow: BV_DK, background: '#2A9D4A' }}
+                  className="px-3 py-1.5 text-sm font-700 uppercase tracking-wider text-white hover:brightness-110 transition-all"
+                >
+                  Register
+                </button>
+              </>
             )}
             {/* Hamburger */}
             <button
