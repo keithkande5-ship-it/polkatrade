@@ -10,6 +10,9 @@ import {
 } from './display'
 import { Tutorial } from './Tutorial'
 import { WithdrawModal } from './WithdrawModal'
+import { DepositModal } from './DepositModal'
+import { AuthModal } from './AuthModal'
+import { ShieldCheck, MessageCircle } from 'lucide-react'
 
 // ─── Style constants ──────────────────────────────────────────────────────────
 const BV_UP   = '0 1px 0 rgba(255,255,255,0.55) inset, 0 -1px 0 rgba(0,0,0,0.10) inset'
