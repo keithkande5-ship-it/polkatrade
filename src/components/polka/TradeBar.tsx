@@ -112,3 +112,92 @@ export function TradeBar({ pending, onClose, onConfirm, onAddToCombo, inCombo }:
     </div>
   )
 }
+
+// ─── Mobile trade drawer ──────────────────────────────────────────────────────
+
+export const DRAWER_STAKES = [50, 100, 250, 500]
+
+type DrawerProps = {
+  market: Market
+  initialPosition?: string | undefined
+  onClose: () => void
+  onConfirm: (position: string, odds: number, amount: number) => void
+}
+
+/** Slide-up drawer used by the mobile sticky trade bar in market details. */
+export function TradeDrawer({ market, initialPosition, onClose, onConfirm }: DrawerProps) {
+  const options = market.outcomes?.length
+    ? market.outcomes.map(o => ({ label: o.label, odds: o.odds, color: o.color }))
+    : [{ label: 'YES', odds: market.yesOdds, color: NAVY }, { label: 'NO', odds: market.noOdds, color: ORANGE }]
+  const [position, setPosition] = useState(initialPosition ?? options[0]!.label)
+  const [stake, setStake] = useState(100)
+  const odds = options.find(o => o.label === position)?.odds ?? 50
+  const potential = Math.round(estimatePayout(stake, odds))
+
+  return (
+    <div className="fixed inset-0 z-[80] flex items-end" style={{ background: `${NAVY}70` }} onClick={onClose}>
+      <div
+        className="w-full max-h-[85dvh] overflow-y-auto"
+        style={{ background: WARM, borderTopLeftRadius: 8, borderTopRightRadius: 8, boxShadow: '0 -12px 40px rgba(21,43,67,0.25)', animation: 'polkaDrawerUp 0.22s ease-out' }}
+        onClick={e => e.stopPropagation()}
+      >
+        <style>{'@keyframes polkaDrawerUp{from{transform:translateY(100%)}to{transform:translateY(0)}}'}</style>
+        <div className="flex items-center gap-2 px-4 py-3" style={{ background: NAVY, boxShadow: BV_DK, borderTopLeftRadius: 8, borderTopRightRadius: 8 }}>
+          <span className="text-[13px] text-white/80 flex-1 min-w-0 truncate">{market.question}</span>
+          <button onClick={onClose} aria-label="Close trade" className="text-white/60 hover:text-white shrink-0"><X size={20} /></button>
+        </div>
+
+        <div className="p-4 space-y-3">
+          <div>
+            <div className="text-[10px] uppercase tracking-widest font-600 mb-1.5" style={{ fontFamily: 'Barlow Condensed, sans-serif', color: `${NAVY}50` }}>Selected outcome</div>
+            <div className="flex flex-wrap gap-1.5">
+              {options.map(o => (
+                <button
+                  key={o.label}
+                  onClick={() => setPosition(o.label)}
+                  style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, background: position === o.label ? o.color : WARM, color: position === o.label ? '#fff' : NAVY, border: `1.5px solid ${position === o.label ? o.color : NAVY + '22'}`, boxShadow: position === o.label ? BV_DK : BV_IN }}
+                  className="flex-1 min-w-[30%] px-3 py-2.5 text-sm font-700 uppercase tracking-wider flex items-center justify-center gap-1.5"
+                >
+                  {o.label} · <OddsNumber value={o.odds} />
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <div className="text-[10px] uppercase tracking-widest font-600 mb-1.5" style={{ fontFamily: 'Barlow Condensed, sans-serif', color: `${NAVY}50` }}>Stake</div>
+            <div className="grid grid-cols-4 gap-1.5">
+              {DRAWER_STAKES.map(a => (
+                <button
+                  key={a}
+                  onClick={() => setStake(a)}
+                  style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, background: stake === a ? NAVY : WARM, color: stake === a ? WARM : `${NAVY}80`, border: `1px solid ${stake === a ? NAVY : NAVY + '22'}`, boxShadow: stake === a ? BV_DK : BV_IN }}
+                  className="py-2.5 text-sm font-700 active:scale-95 transition-all"
+                >
+                  KES {a}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="border p-3 flex items-end justify-between gap-3" style={{ background: '#EBF7EE', borderColor: '#2A6B3A33', borderRadius: 3 }}>
+            <div className="min-w-0">
+              <div className="text-[10px] uppercase tracking-widest font-700" style={{ fontFamily: 'Barlow Condensed, sans-serif', color: '#2A6B3A' }}>Potential return</div>
+              <div className="text-3xl font-800 leading-none mt-1" style={{ fontFamily: 'Barlow Condensed, sans-serif', color: '#1F6B45' }}>{formatKES(potential)}</div>
+            </div>
+            <div className="text-right text-[11px] shrink-0" style={{ color: `${NAVY}55` }}>Stake {formatKES(stake)}</div>
+          </div>
+          <p className="text-[10px] leading-relaxed" style={{ color: `${NAVY}45` }}>Estimate only — parimutuel payout depends on the winning pool at resolution.</p>
+
+          <button
+            onClick={() => onConfirm(position, odds, stake)}
+            style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, background: ORANGE, boxShadow: BV_DK }}
+            className="w-full py-4 text-base font-800 uppercase tracking-wider text-white hover:brightness-110 active:scale-[0.99] flex items-center justify-center gap-2"
+          >
+            <Check size={18} /> Confirm Trade
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
