@@ -1,6 +1,6 @@
 import polkaLogo from '@/assets/polka-logo.png.asset.json'
 import { useState, useEffect, useRef } from 'react'
-import type { CategoryId, Market, ComboPosition, PortfolioTrade, WalletEntry, View, CustomCategory, Outcome } from './types'
+import type { CategoryId, Market, ComboPosition, PortfolioTrade, WalletEntry, View, CustomCategory, Outcome, InfoTab } from './types'
 import { MARKETS, MOCK_PROFILE, INITIAL_PORTFOLIO, INITIAL_WALLET, TOP_MOVERS, RECENT_BETS } from './data'
 import { formatVolume, formatKES, shouldHideStats, estimatePayout, comboMath, seedSplit } from './utils'
 import {
@@ -12,7 +12,11 @@ import { Tutorial } from './Tutorial'
 import { WithdrawModal } from './WithdrawModal'
 import { DepositModal } from './DepositModal'
 import { AuthModal } from './AuthModal'
-import { ShieldCheck, MessageCircle } from 'lucide-react'
+import { ShieldCheck, MessageCircle, Lock, Link2, HelpCircle } from 'lucide-react'
+import { TradeDrawer } from './TradeBar'
+import { InfoModal } from './InfoModal'
+
+const PRIVATE_VIEWS: View[] = ['portfolio', 'wallet', 'notifications', 'settings', 'profile', 'account']
 
 // ─── Style constants ──────────────────────────────────────────────────────────
 const BV_UP   = '0 1px 0 rgba(255,255,255,0.55) inset, 0 -1px 0 rgba(0,0,0,0.10) inset'
@@ -282,10 +286,11 @@ type SideMenuProps = {
   onSignOut: () => void
   onDeposit: () => void
   onCreate: () => void
+  onInfo: () => void
   activeView: View
 }
 
-function SideMenu({ open, onClose, isSignedIn, balance, onNavigate, onSignIn, onSignOut, onDeposit, onCreate, activeView }: SideMenuProps) {
+function SideMenu({ open, onClose, isSignedIn, balance, onNavigate, onSignIn, onSignOut, onDeposit, onCreate, onInfo, activeView }: SideMenuProps) {
   if (!open) return null
   const nav = (v: View, label: string, icon: string) => (
     <button
@@ -294,7 +299,8 @@ function SideMenu({ open, onClose, isSignedIn, balance, onNavigate, onSignIn, on
       style={{ background: activeView === v ? SKY : 'transparent', borderLeft: activeView === v ? `3px solid ${ORANGE}` : '3px solid transparent' }}
     >
       <span className="text-base w-5 text-center shrink-0">{icon}</span>
-      <span className="font-500" style={{ color: NAVY }}>{label}</span>
+      <span className="font-500 flex-1" style={{ color: NAVY }}>{label}</span>
+      {!isSignedIn && PRIVATE_VIEWS.includes(v) && <Lock size={13} style={{ color: `${NAVY}55` }} aria-label="Sign in required" />}
     </button>
   )
 
@@ -325,15 +331,11 @@ function SideMenu({ open, onClose, isSignedIn, balance, onNavigate, onSignIn, on
 
         {/* Nav items */}
         <div className="flex-1 py-2">
-          {isSignedIn && (
-            <>
-              {nav('profile', 'My Profile', '👤')}
-              {nav('account', 'My Account', '⚙️')}
-              {nav('portfolio', 'Portfolio', '📊')}
-              {nav('wallet', 'Wallet & Ledger', '💼')}
-              <div className="my-1 mx-4 h-px" style={{ background: `${NAVY}12` }} />
-            </>
-          )}
+          {isSignedIn && nav('profile', 'My Profile', '👤')}
+          {isSignedIn && nav('account', 'My Account', '⚙️')}
+          {nav('portfolio', 'Portfolio', '📊')}
+          {nav('wallet', 'Wallet & Ledger', '💼')}
+          <div className="my-1 mx-4 h-px" style={{ background: `${NAVY}12` }} />
           {nav('markets', 'Markets', '📋')}
           {nav('leaderboard', 'Leaderboard', '🏆')}
           <button
@@ -342,12 +344,21 @@ function SideMenu({ open, onClose, isSignedIn, balance, onNavigate, onSignIn, on
             style={{ borderLeft: '3px solid transparent' }}
           >
             <span className="text-base w-5 text-center shrink-0" style={{ color: ORANGE }}>＋</span>
-            <span className="font-600" style={{ color: ORANGE }}>Create Market</span>
+            <span className="font-600 flex-1" style={{ color: ORANGE }}>Create Market</span>
+            {!isSignedIn && <Lock size={13} style={{ color: `${NAVY}55` }} />}
           </button>
           <div className="my-1 mx-4 h-px" style={{ background: `${NAVY}12` }} />
           {nav('notifications', 'Notifications', '🔔')}
           {nav('settings', 'Settings', '⚙️')}
           {nav('language', 'Language', '🌐')}
+          <button
+            onClick={() => { onInfo(); onClose() }}
+            className="w-full flex items-center gap-3 px-4 py-3 text-sm text-left transition-colors hover:brightness-95"
+            style={{ borderLeft: '3px solid transparent' }}
+          >
+            <span className="w-5 flex justify-center shrink-0" style={{ color: NAVY }}><HelpCircle size={16} /></span>
+            <span className="font-500" style={{ color: NAVY }}>FAQ, Help & Legal</span>
+          </button>
         </div>
 
         {/* Footer */}
@@ -563,6 +574,16 @@ function MarketDetail({ market: baseMarket, onClose, comboPositions, onAddToComb
   const estimated = Math.round(estimatePayout(numAmount, selectedOdds))
 
   const statusLabel = marketStatus(market)
+  const { push } = useToasts()
+  const [drawer, setDrawer] = useState<{ position?: string | undefined } | null>(null)
+  const shareUrl = typeof window !== 'undefined' ? `${window.location.origin}/?market=${market.id}` : ''
+  const shareWhatsApp = () => {
+    window.open(`https://wa.me/?text=${encodeURIComponent(`Trade on Polka: ${market.question} — ${shareUrl}`)}`, '_blank', 'noopener,noreferrer')
+  }
+  const copyLink = () => {
+    if (!navigator.clipboard) { push('Could not copy link', 'warn'); return }
+    navigator.clipboard.writeText(shareUrl).then(() => push('Link copied!'), () => push('Could not copy link', 'warn'))
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col" style={{ background: MINERAL }}>
@@ -581,7 +602,7 @@ function MarketDetail({ market: baseMarket, onClose, comboPositions, onAddToComb
       </div>
 
       <div className="flex-1 overflow-y-auto">
-        <div className="mx-auto w-full max-w-6xl p-3 sm:p-4 flex flex-col lg:grid lg:grid-cols-[minmax(0,1fr)_360px] gap-3 sm:gap-4 items-start">
+        <div className="mx-auto w-full max-w-6xl p-3 sm:p-4 pb-24 lg:pb-4 flex flex-col lg:grid lg:grid-cols-[minmax(0,1fr)_360px] gap-3 sm:gap-4 items-start">
 
           {/* ── Trade panel (first on mobile, right column on desktop) ── */}
           <div className="order-1 lg:order-2 w-full lg:sticky lg:top-4">
@@ -717,6 +738,14 @@ function MarketDetail({ market: baseMarket, onClose, comboPositions, onAddToComb
                 <span className="text-[11px]" style={{ color: `${NAVY}45` }}>Resolves {market.endsAt}</span>
               </div>
               <h1 className="text-base sm:text-xl font-600 mt-2 leading-snug" style={{ color: NAVY }}>{market.question}</h1>
+              <div className="flex gap-2 mt-2">
+                <button onClick={shareWhatsApp} style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, background: '#1F8A4C', boxShadow: BV_DK }} className="px-3 py-1.5 text-xs font-700 uppercase tracking-wider text-white hover:brightness-110 flex items-center gap-1.5">
+                  <MessageCircle size={13} /> Share to WhatsApp
+                </button>
+                <button onClick={copyLink} style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, background: WARM, border: `1px solid ${NAVY}22`, boxShadow: BV_UP, color: NAVY }} className="px-3 py-1.5 text-xs font-700 uppercase tracking-wider hover:brightness-95 flex items-center gap-1.5">
+                  <Link2 size={13} /> Copy Link
+                </button>
+              </div>
 
               <div className="grid grid-cols-2 gap-3 mt-3">
                 <div className="border p-3" style={{ background: MINERAL, borderRadius: 3, borderColor: `${NAVY}12`, boxShadow: BV_IN }}>
@@ -812,6 +841,41 @@ function MarketDetail({ market: baseMarket, onClose, comboPositions, onAddToComb
           </div>
         </div>
       </div>
+      {/* ── Mobile sticky trade bar ── */}
+      {!isResolved && (
+        <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t p-3 shadow-lg" style={{ borderColor: `${NAVY}18` }}>
+          {isMulti ? (
+            <button
+              onClick={() => setDrawer({})}
+              style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, background: NAVY, boxShadow: BV_DK }}
+              className="w-full py-3 text-sm font-700 uppercase tracking-wider text-white active:scale-[0.99]"
+            >
+              Select Outcome · ({market.outcomes!.length} options)
+            </button>
+          ) : (
+            <div className="grid grid-cols-2 gap-2">
+              <button onClick={() => setDrawer({ position: 'YES' })} style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, background: '#1F6B45', boxShadow: BV_DK }} className="py-3 text-sm font-700 uppercase tracking-wider text-white flex items-center justify-center gap-1 active:scale-[0.99]">
+                Buy YES · <OddsNumber value={market.yesOdds} />
+              </button>
+              <button onClick={() => setDrawer({ position: 'NO' })} style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, background: ORANGE, boxShadow: BV_DK }} className="py-3 text-sm font-700 uppercase tracking-wider text-white flex items-center justify-center gap-1 active:scale-[0.99]">
+                Buy NO · <OddsNumber value={market.noOdds} />
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+      {drawer && (
+        <TradeDrawer
+          market={market}
+          initialPosition={drawer.position}
+          onClose={() => setDrawer(null)}
+          onConfirm={(pos, odds, amt) => {
+            if (locked && locked !== pos) { push(`You already hold ${locked} on this market`, 'warn'); return }
+            setDrawer(null)
+            onConfirm(baseMarket, pos, odds, amt)
+          }}
+        />
+      )}
     </div>
   )
 }
@@ -819,19 +883,59 @@ function MarketDetail({ market: baseMarket, onClose, comboPositions, onAddToComb
 
 // ─── Create Market ────────────────────────────────────────────────────────────
 
-function CreateMarket({ onClose }: { onClose: () => void }) {
+const OUTCOME_COLORS = ['#152B43', '#E15B36', '#2A7B6F', '#6B21A8', '#B7791F', '#2563A8']
+const SEED_CHIPS = [100, 250, 500, 1000]
+
+type CreateMarketProps = { onClose: () => void; balance: number; onPublish: (market: Market, seed: number) => void }
+
+function CreateMarket({ onClose, balance, onPublish }: CreateMarketProps) {
   const [step, setStep] = useState(1)
-  const [form, setForm] = useState({ question: '', description: '', category: 'Kenya' as CategoryId, endDate: '', startingOdds: 50 })
-  const [marketType, setMarketType] = useState<'binary' | 'multiple' | 'custom'>('binary')
+  const [marketId] = useState(() => Date.now())
+  const [form, setForm] = useState({ question: '', criteria: '', source: '', category: 'Kenya' as CategoryId, endDate: '', startingOdds: 50 })
+  const [marketType, setMarketType] = useState<'binary' | 'multiple'>('binary')
   const [outcomes, setOutcomes] = useState<{ label: string; odds: number }[]>([
-    { label: '', odds: 50 },
-    { label: '', odds: 50 },
+    { label: '', odds: 34 }, { label: '', odds: 33 }, { label: '', odds: 33 },
   ])
-  const oddsTotal = outcomes.reduce((s, o) => s + o.odds, 0)
+  const [seedInput, setSeedInput] = useState('100')
+  const isMulti = marketType === 'multiple'
+  const seedAmount = Math.floor(Number(seedInput) || 0)
+  const oddsTotal = isMulti ? outcomes.reduce((s, o) => s + o.odds, 0) : 100
   const setOutcome = (i: number, patch: Partial<{ label: string; odds: number }>) =>
     setOutcomes(os => os.map((o, idx) => (idx === i ? { ...o, ...patch } : o)))
-  const { seed, yesPool, noPool } = seedSplit(form.startingOdds)
+  const splitEvenly = () => setOutcomes(os => {
+    const base = Math.floor(100 / os.length)
+    return os.map((o, i) => ({ ...o, odds: base + (i < 100 - base * os.length ? 1 : 0) }))
+  })
   const allCats = BASE_CATEGORIES.filter(c => c.id !== 'All')
+
+  const step1Ok = form.question.trim().length >= 10 && form.criteria.trim().length >= 10 && form.source.trim().length >= 4 && Boolean(form.endDate)
+    && (!isMulti || outcomes.every(o => o.label.trim().length > 0))
+  const step2Ok = seedAmount >= 100 && oddsTotal === 100 && (!isMulti || outcomes.every(o => o.odds >= 1))
+  const split = seedSplit(isMulti ? outcomes.map(o => o.odds) : form.startingOdds, isMulti ? outcomes.length : 2, seedAmount)
+  const poolLabels = isMulti ? outcomes.map((o, i) => o.label || `Outcome ${i + 1}`) : ['YES', 'NO']
+  const insufficient = balance < seedAmount
+
+  const preview: Market = {
+    id: marketId,
+    question: form.question.trim() || 'Your question here',
+    category: form.category,
+    yesOdds: isMulti ? (outcomes[0]?.odds ?? 50) : form.startingOdds,
+    noOdds: isMulti ? 100 - (outcomes[0]?.odds ?? 50) : 100 - form.startingOdds,
+    outcomes: isMulti ? outcomes.map((o, i) => ({ label: o.label.trim() || `Outcome ${i + 1}`, odds: o.odds, color: OUTCOME_COLORS[i % OUTCOME_COLORS.length]! })) : undefined,
+    volume: seedAmount,
+    endsAt: form.endDate || 'TBD',
+    isLive: false,
+    trending: false,
+    participants: 1,
+    description: `${form.criteria.trim()} Official source: ${form.source.trim()}`,
+    seedPool: seedAmount,
+  }
+
+  const label = (text: string) => (
+    <label className="block text-[11px] font-600 uppercase tracking-wider mb-1.5" style={{ color: `${NAVY}55`, fontFamily: 'Barlow Condensed, sans-serif' }}>{text}</label>
+  )
+  const inputStyle = { borderRadius: 3, boxShadow: BV_IN, background: MINERAL, color: NAVY, borderColor: `${NAVY}15` }
+  const canContinue = step === 1 ? step1Ok : step2Ok
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" style={{ background: `${NAVY}50` }} onClick={onClose}>
@@ -839,7 +943,7 @@ function CreateMarket({ onClose }: { onClose: () => void }) {
         <div className="border-b px-4 py-4 flex items-center justify-between shrink-0" style={{ background: NAVY, boxShadow: BV_DK, borderColor: `${NAVY}18` }}>
           <div>
             <div style={{ fontFamily: 'Barlow Condensed, sans-serif' }} className="text-[10px] uppercase tracking-widest text-white/40 font-600">Create Market · Step {step} of 3</div>
-            <div className="text-sm font-600 text-white mt-0.5">{step === 1 ? 'Define your question' : step === 2 ? 'Set resolution & seed' : 'Review & publish'}</div>
+            <div className="text-sm font-600 text-white mt-0.5">{step === 1 ? 'Details & type' : step === 2 ? 'Probabilities & seed' : 'Preview & deduct'}</div>
           </div>
           <button onClick={onClose} className="text-white/40 hover:text-white text-2xl w-8 h-8 flex items-center justify-center">×</button>
         </div>
@@ -849,11 +953,11 @@ function CreateMarket({ onClose }: { onClose: () => void }) {
           {step === 1 && (
             <>
               <div>
-                <label className="block text-[11px] font-600 uppercase tracking-wider mb-1.5" style={{ color: `${NAVY}55`, fontFamily: 'Barlow Condensed, sans-serif' }}>Market Question</label>
-                <textarea value={form.question} onChange={e => setForm({ ...form, question: e.target.value })} placeholder="Will [event] happen by [date]?" rows={3} className="w-full border p-3 text-sm resize-none outline-none" style={{ borderRadius: 3, boxShadow: BV_IN, background: MINERAL, color: NAVY, borderColor: `${NAVY}15` }} />
+                {label('Market Question')}
+                <textarea value={form.question} onChange={e => setForm({ ...form, question: e.target.value })} placeholder="Will [event] happen by [date]?" rows={3} className="w-full border p-3 text-sm resize-none outline-none" style={inputStyle} />
               </div>
               <div>
-                <label className="block text-[11px] font-600 uppercase tracking-wider mb-1.5" style={{ color: `${NAVY}55`, fontFamily: 'Barlow Condensed, sans-serif' }}>Category</label>
+                {label('Category')}
                 <div className="flex flex-wrap gap-1.5">
                   {allCats.map(c => (
                     <button key={String(c.id)} onClick={() => setForm({ ...form, category: c.id })} style={{ borderRadius: 3, fontFamily: 'Barlow Condensed, sans-serif', boxShadow: form.category === c.id ? BV_DK : BV_UP, background: form.category === c.id ? NAVY : WARM, color: form.category === c.id ? WARM : `${NAVY}60`, border: `1px solid ${form.category === c.id ? NAVY : NAVY + '15'}` }} className="px-2.5 py-1.5 text-xs font-600 uppercase tracking-wider transition-all flex items-center gap-1">
@@ -862,125 +966,117 @@ function CreateMarket({ onClose }: { onClose: () => void }) {
                   ))}
                 </div>
               </div>
-              {/* Market type */}
               <div>
-                <label className="block text-[11px] font-600 uppercase tracking-wider mb-1.5" style={{ color: `${NAVY}55`, fontFamily: 'Barlow Condensed, sans-serif' }}>Market Type</label>
-                <div className="flex flex-wrap gap-1.5">
-                  {([
-                    { id: 'binary', label: 'Yes / No' },
-                    { id: 'multiple', label: 'Multiple outcomes' },
-                    { id: 'custom', label: 'Custom' },
-                  ] as const).map(t => (
+                {label('Market Type')}
+                <div className="grid grid-cols-2 gap-1.5">
+                  {([{ id: 'binary', label: 'Binary (Yes/No)' }, { id: 'multiple', label: 'Multiple Choice' }] as const).map(t => (
                     <button
                       key={t.id}
                       onClick={() => setMarketType(t.id)}
                       style={{ borderRadius: 3, fontFamily: 'Barlow Condensed, sans-serif', boxShadow: marketType === t.id ? BV_DK : BV_UP, background: marketType === t.id ? NAVY : WARM, color: marketType === t.id ? WARM : `${NAVY}60`, border: `1px solid ${marketType === t.id ? NAVY : NAVY + '15'}` }}
-                      className="px-2.5 py-1.5 text-xs font-600 uppercase tracking-wider transition-all"
+                      className="py-2 text-xs font-700 uppercase tracking-wider transition-all"
                     >
                       {t.label}
                     </button>
                   ))}
                 </div>
-                <p className="text-[11px] mt-1.5" style={{ color: `${NAVY}45` }}>
-                  {marketType === 'binary'
-                    ? 'Two outcomes — YES or NO.'
-                    : marketType === 'multiple'
-                      ? 'Several named outcomes, each with a starting probability. They must add up to 100%.'
-                      : 'Free-form outcomes you name yourself — useful for scores, ranges or league winners.'}
-                </p>
               </div>
-
-              {/* Outcome editor */}
-              {marketType !== 'binary' && (
+              {isMulti && (
                 <div>
-                  <label className="block text-[11px] font-600 uppercase tracking-wider mb-1.5" style={{ color: `${NAVY}55`, fontFamily: 'Barlow Condensed, sans-serif' }}>Outcomes</label>
+                  {label(`Outcome labels (${outcomes.length} of 6)`)}
                   <div className="space-y-1.5">
                     {outcomes.map((o, i) => (
                       <div key={i} className="flex gap-1.5 items-center">
-                        <input
-                          value={o.label}
-                          onChange={e => setOutcome(i, { label: e.target.value })}
-                          placeholder={`Outcome ${i + 1}`}
-                          className="flex-1 min-w-0 border px-2.5 py-2 text-sm outline-none"
-                          style={{ borderRadius: 3, boxShadow: BV_IN, background: MINERAL, color: NAVY, borderColor: `${NAVY}15` }}
-                        />
-                        <input
-                          type="number" min={1} max={99} value={o.odds}
-                          onChange={e => setOutcome(i, { odds: Math.max(1, Math.min(99, Number(e.target.value))) })}
-                          className="w-16 border px-2 py-2 text-sm outline-none"
-                          style={{ borderRadius: 3, boxShadow: BV_IN, background: MINERAL, color: NAVY, borderColor: `${NAVY}15`, fontFamily: 'Geist Mono, monospace' }}
-                        />
-                        <span className="text-[11px]" style={{ color: `${NAVY}40` }}>%</span>
+                        <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ background: OUTCOME_COLORS[i] }} />
+                        <input value={o.label} onChange={e => setOutcome(i, { label: e.target.value })} placeholder={`Outcome ${i + 1}`} className="flex-1 min-w-0 border px-2.5 py-2 text-sm outline-none" style={inputStyle} />
                         {outcomes.length > 2 && (
-                          <button onClick={() => setOutcomes(os => os.filter((_, idx) => idx !== i))} className="w-7 h-7 shrink-0" style={{ color: `${NAVY}40` }}>×</button>
+                          <button onClick={() => setOutcomes(os => os.filter((_, idx) => idx !== i))} aria-label="Remove outcome" className="w-7 h-7 shrink-0" style={{ color: `${NAVY}50` }}>×</button>
                         )}
                       </div>
                     ))}
                   </div>
-                  <div className="flex items-center justify-between mt-2">
-                    <button
-                      onClick={() => setOutcomes(os => [...os, { label: '', odds: 10 }])}
-                      style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, boxShadow: BV_UP, border: `1px solid ${NAVY}15`, color: `${NAVY}55` }}
-                      className="px-2.5 py-1.5 text-[11px] font-700 uppercase tracking-wider"
-                    >
-                      Add outcome
-                    </button>
-                    <span style={{ fontFamily: 'Geist Mono, monospace', color: oddsTotal === 100 ? '#1F6B45' : ORANGE }} className="text-[11px] font-700">
-                      {oddsTotal}% / 100%
-                    </span>
-                  </div>
+                  {outcomes.length < 6 && (
+                    <button onClick={() => setOutcomes(os => [...os, { label: '', odds: 0 }])} style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, boxShadow: BV_UP, border: `1px solid ${NAVY}15`, color: `${NAVY}60` }} className="mt-2 px-2.5 py-1.5 text-[11px] font-700 uppercase tracking-wider">+ Add outcome</button>
+                  )}
                 </div>
               )}
-
               <div>
-                <label className="block text-[11px] font-600 uppercase tracking-wider mb-1.5" style={{ color: `${NAVY}55`, fontFamily: 'Barlow Condensed, sans-serif' }}>End Date</label>
-                <input type="date" value={form.endDate} onChange={e => setForm({ ...form, endDate: e.target.value })} className="border p-2.5 text-sm outline-none w-full" style={{ borderRadius: 3, boxShadow: BV_IN, background: MINERAL, color: NAVY, borderColor: `${NAVY}15` }} />
+                {label('Resolution Criteria (required)')}
+                <textarea value={form.criteria} onChange={e => setForm({ ...form, criteria: e.target.value })} placeholder={isMulti ? 'Explain exactly how the winning outcome is decided.' : 'Describe exactly what must happen for YES to win.'} rows={3} className="w-full border p-3 text-sm resize-none outline-none" style={inputStyle} />
               </div>
+              <div>
+                {label('Official Source URL / Proof (required)')}
+                <input value={form.source} onChange={e => setForm({ ...form, source: e.target.value })} placeholder="https://www.iebc.or.ke/…" className="w-full border px-3 py-2.5 text-sm outline-none" style={{ ...inputStyle, fontFamily: 'Geist Mono, monospace' }} />
+              </div>
+              <div>
+                {label('End Date')}
+                <input type="date" value={form.endDate} onChange={e => setForm({ ...form, endDate: e.target.value })} className="border p-2.5 text-sm outline-none w-full" style={inputStyle} />
+              </div>
+              {!step1Ok && <p className="text-[11px]" style={{ color: `${NAVY}50` }}>Fill in the question, {isMulti ? 'every outcome label, ' : ''}resolution criteria, official source and end date to continue.</p>}
             </>
           )}
           {step === 2 && (
             <>
-              <div>
-                <label className="block text-[11px] font-600 uppercase tracking-wider mb-1.5" style={{ color: `${NAVY}55`, fontFamily: 'Barlow Condensed, sans-serif' }}>Resolution Criteria</label>
-                <textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="Describe exactly what must happen for YES to win. Be specific about your verification source." rows={4} className="w-full border p-3 text-sm resize-none outline-none" style={{ borderRadius: 3, boxShadow: BV_IN, background: MINERAL, color: NAVY, borderColor: `${NAVY}15` }} />
-              </div>
-              <div>
-                <label className="block text-[11px] font-600 uppercase tracking-wider mb-1.5" style={{ color: `${NAVY}55`, fontFamily: 'Barlow Condensed, sans-serif' }}>
-                  Starting Position — {form.startingOdds}% YES
-                </label>
-                <input type="range" min={5} max={95} value={form.startingOdds} onChange={e => setForm({ ...form, startingOdds: Number(e.target.value) })} className="w-full accent-[#152B43]" />
-                <div className="flex justify-between text-[10px] mt-1" style={{ color: `${NAVY}35` }}>
-                  <span>Unlikely</span><span>50/50</span><span>Likely</span>
+              {isMulti ? (
+                <div>
+                  {label('Starting probabilities')}
+                  <div className="space-y-1.5">
+                    {outcomes.map((o, i) => (
+                      <div key={i} className="flex gap-2 items-center">
+                        <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ background: OUTCOME_COLORS[i] }} />
+                        <span className="flex-1 min-w-0 truncate text-sm" style={{ color: NAVY }}>{o.label}</span>
+                        <input type="number" min={1} max={99} value={o.odds} onChange={e => setOutcome(i, { odds: Math.max(0, Math.min(99, Math.round(Number(e.target.value) || 0))) })} className="w-16 border px-2 py-1.5 text-sm outline-none" style={{ ...inputStyle, fontFamily: 'Geist Mono, monospace' }} />
+                        <span className="text-[11px]" style={{ color: `${NAVY}40` }}>%</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex items-center justify-between mt-2">
+                    <button onClick={splitEvenly} style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, boxShadow: BV_UP, border: `1px solid ${NAVY}15`, color: `${NAVY}60` }} className="px-2.5 py-1.5 text-[11px] font-700 uppercase tracking-wider">Split evenly</button>
+                    <span style={{ fontFamily: 'Geist Mono, monospace', color: oddsTotal === 100 ? '#1F6B45' : ORANGE }} className="text-[11px] font-700">{oddsTotal}% / 100%</span>
+                  </div>
                 </div>
-              </div>
-              {/* Seed breakdown */}
-              <div className="border p-4 space-y-2" style={{ background: SKY, borderRadius: 3, borderColor: `${NAVY}15`, boxShadow: BV_IN }}>
-                <div style={{ fontFamily: 'Barlow Condensed, sans-serif', color: `${NAVY}50` }} className="text-[10px] uppercase tracking-widest font-600">Market Seed — KES {seed}</div>
-                <p className="text-xs" style={{ color: `${NAVY}60` }}>To start your market, you seed <strong>KES {seed}</strong> from your balance. This creates the initial YES/NO liquidity pool.</p>
-                <div className="flex gap-4 mt-2 pt-2 border-t" style={{ borderColor: `${NAVY}15` }}>
-                  <div><div style={{ fontFamily: 'Geist Mono, monospace', color: NAVY }} className="text-sm font-700">KES {yesPool}</div><div className="text-[10px]" style={{ color: `${NAVY}45` }}>YES pool</div></div>
-                  <div><div style={{ fontFamily: 'Geist Mono, monospace', color: `${NAVY}55` }} className="text-sm font-700">KES {noPool}</div><div className="text-[10px]" style={{ color: `${NAVY}35` }}>NO pool</div></div>
-                  <div className="ml-auto"><div style={{ fontFamily: 'Geist Mono, monospace', color: ORANGE }} className="text-sm font-700">2%</div><div className="text-[10px]" style={{ color: `${NAVY}35` }}>Platform fee</div></div>
+              ) : (
+                <div>
+                  {label(`Starting probability — ${form.startingOdds}% YES / ${100 - form.startingOdds}% NO`)}
+                  <input type="range" min={5} max={95} value={form.startingOdds} onChange={e => setForm({ ...form, startingOdds: Number(e.target.value) })} className="w-full accent-[#152B43]" />
+                  <div className="flex justify-between text-[10px] mt-1" style={{ color: `${NAVY}35` }}><span>Unlikely</span><span>50/50</span><span>Likely</span></div>
                 </div>
+              )}
+              <div>
+                {label('Seed liquidity (min KES 100)')}
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {SEED_CHIPS.map(a => (
+                    <button key={a} onClick={() => setSeedInput(String(a))} style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, boxShadow: seedAmount === a ? BV_DK : BV_UP, background: seedAmount === a ? NAVY : WARM, color: seedAmount === a ? WARM : `${NAVY}70`, border: `1px solid ${seedAmount === a ? NAVY : NAVY + '18'}` }} className="px-3 py-1.5 text-sm font-700">KES {a.toLocaleString()}</button>
+                  ))}
+                </div>
+                <input type="number" min={100} value={seedInput} onChange={e => setSeedInput(e.target.value)} className="w-full border px-3 py-2.5 text-sm outline-none" style={{ ...inputStyle, fontFamily: 'Geist Mono, monospace' }} />
+                {seedAmount < 100 && <p className="text-[11px] mt-1" style={{ color: ORANGE }}>Minimum seed is KES 100.</p>}
               </div>
+              <div className="border p-3 space-y-1.5" style={{ background: SKY, borderRadius: 3, borderColor: `${NAVY}15`, boxShadow: BV_IN }}>
+                <div style={{ fontFamily: 'Barlow Condensed, sans-serif', color: `${NAVY}50` }} className="text-[10px] uppercase tracking-widest font-600">Seed split — {formatKES(split.seed)}</div>
+                {split.pools.map((pool, i) => (
+                  <div key={i} className="flex justify-between text-xs" style={{ color: NAVY }}>
+                    <span className="truncate">{poolLabels[i]} pool</span>
+                    <span style={{ fontFamily: 'Geist Mono, monospace' }} className="font-700 shrink-0">{formatKES(pool)}</span>
+                  </div>
+                ))}
+              </div>
+              {oddsTotal !== 100 && <p className="text-[11px]" style={{ color: ORANGE }}>Probabilities must add up to exactly 100% to continue.</p>}
             </>
           )}
           {step === 3 && (
             <div className="space-y-3">
-              <div className="border p-4" style={{ background: SKY, borderRadius: 3, borderColor: `${NAVY}15`, boxShadow: BV_IN }}>
-                <div style={{ fontFamily: 'Barlow Condensed, sans-serif', color: `${NAVY}45` }} className="text-[10px] uppercase tracking-widest font-600 mb-2">Preview</div>
-                <p className="text-sm font-600" style={{ color: NAVY }}>{form.question || 'Your question here'}</p>
-                <div className="flex gap-4 mt-3">
-                  <div><span style={{ fontFamily: 'Barlow Condensed, sans-serif', color: NAVY }} className="text-2xl font-700">{form.startingOdds}%</span><span className="text-[11px] ml-1" style={{ color: `${NAVY}45` }}>YES</span></div>
-                  <div><span style={{ fontFamily: 'Barlow Condensed, sans-serif', color: `${NAVY}45` }} className="text-2xl font-700">{100 - form.startingOdds}%</span><span className="text-[11px] ml-1" style={{ color: `${NAVY}30` }}>NO</span></div>
-                </div>
-                <div className="flex gap-3 mt-2 text-[11px]" style={{ color: `${NAVY}45` }}>
-                  <span>{form.category}</span>{form.endDate && <span>· Ends {form.endDate}</span>}
-                </div>
+              <div style={{ fontFamily: 'Barlow Condensed, sans-serif', color: `${NAVY}45` }} className="text-[10px] uppercase tracking-widest font-600">Live preview</div>
+              <div className="border overflow-hidden pointer-events-none" style={{ borderRadius: 3, borderColor: `${NAVY}15` }}>
+                <MarketRow market={preview} index={0} onSelect={() => {}} comboMode={false} comboPositions={[]} onAddToCombo={() => {}} customCategories={[]} />
               </div>
-              <div className="border p-3 text-xs leading-relaxed" style={{ background: MINERAL, borderRadius: 3, borderColor: `${NAVY}10`, color: `${NAVY}50` }}>
-                Publishing deducts <strong>KES {seed}</strong> from your balance as the market seed. By publishing you agree to the Market Creation Guidelines.
+              <div className="border p-3 space-y-1.5" style={{ background: insufficient ? '#FBEAEA' : '#EBF7EE', borderRadius: 3, borderColor: insufficient ? '#8B1A1A33' : '#2A6B3A33' }}>
+                <p className="text-sm font-600" style={{ color: NAVY }}><strong>{formatKES(seedAmount)}</strong> will be deducted from your wallet to fund this market.</p>
+                <div className="flex justify-between text-xs" style={{ color: `${NAVY}70` }}><span>Wallet balance</span><span style={{ fontFamily: 'Geist Mono, monospace' }}>{formatKES(balance)}</span></div>
+                <div className="flex justify-between text-xs" style={{ color: `${NAVY}70` }}><span>Balance after publishing</span><span style={{ fontFamily: 'Geist Mono, monospace' }}>{formatKES(balance - seedAmount)}</span></div>
+                {insufficient && <p className="text-[11px]" style={{ color: '#8B1A1A' }}>Not enough balance — publishing will open M-Pesa deposit first.</p>}
               </div>
+              <p className="text-[11px] leading-relaxed" style={{ color: `${NAVY}50` }}>By publishing you agree to the Market Creation Guidelines. Resolution follows your stated criteria and source.</p>
             </div>
           )}
         </div>
@@ -988,8 +1084,8 @@ function CreateMarket({ onClose }: { onClose: () => void }) {
         <div className="border-t px-4 py-3 flex justify-between items-center shrink-0" style={{ background: MINERAL, borderColor: `${NAVY}15` }}>
           {step > 1 ? <button onClick={() => setStep(s => s - 1)} className="px-4 py-2.5 min-w-[80px] text-sm border transition-colors" style={{ borderRadius: 3, boxShadow: BV_UP, color: `${NAVY}55`, borderColor: `${NAVY}15` }}>← Back</button> : <div />}
           {step < 3
-            ? <button onClick={() => setStep(s => s + 1)} style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, boxShadow: BV_DK, background: NAVY }} className="px-5 py-2.5 min-w-[120px] text-sm font-700 uppercase tracking-wider text-white hover:brightness-110 transition-all">Continue →</button>
-            : <button style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, boxShadow: BV_DK, background: ORANGE }} className="px-5 py-2.5 min-w-[140px] text-sm font-700 uppercase tracking-wider text-white hover:brightness-110 transition-all">Publish · KES {seed}</button>
+            ? <button onClick={() => canContinue && setStep(s => s + 1)} disabled={!canContinue} style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, boxShadow: BV_DK, background: NAVY }} className="px-5 py-2.5 min-w-[120px] text-sm font-700 uppercase tracking-wider text-white hover:brightness-110 transition-all disabled:opacity-40">Continue →</button>
+            : <button onClick={() => onPublish(preview, seedAmount)} style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, boxShadow: BV_DK, background: ORANGE }} className="px-5 py-2.5 min-w-[140px] text-sm font-700 uppercase tracking-wider text-white hover:brightness-110 transition-all">{insufficient ? 'Deposit to publish' : `Publish · ${formatKES(seedAmount)}`}</button>
           }
         </div>
       </div>
@@ -1068,87 +1164,152 @@ function PortfolioPage({ trades, balance, isSignedIn, onNavigate, onSignIn, onOp
     )
   }
 
-  const isEmpty = trades.length === 0
-
   return (
     <div className="flex-1 overflow-y-auto">
       {/* Balance card */}
       <div className="border-b p-4" style={{ background: NAVY, borderColor: `${NAVY}22` }}>
-        <div className="flex items-end justify-between">
-          <div>
+        <div className="flex items-end justify-between gap-3">
+          <div className="min-w-0">
             <div style={{ fontFamily: 'Barlow Condensed, sans-serif' }} className="text-[10px] uppercase tracking-widest text-white/40 font-600">Wallet Balance</div>
             <div style={{ fontFamily: 'Barlow Condensed, sans-serif', color: '#F7D000' }} className="text-3xl font-700 mt-1">{formatKES(balance)}</div>
           </div>
-          <button onClick={() => onNavigate('wallet')} style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, boxShadow: BV_DK, background: `${WARM}15`, border: `1px solid ${WARM}20`, color: WARM }} className="px-3 py-2 text-xs font-700 uppercase tracking-wider hover:brightness-110 transition-all">Wallet & Ledger →</button>
+          <button onClick={() => onNavigate('wallet')} style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, boxShadow: BV_DK, background: `${WARM}15`, border: `1px solid ${WARM}20`, color: WARM }} className="px-3 py-2 text-xs font-700 uppercase tracking-wider hover:brightness-110 transition-all shrink-0">Wallet & Ledger →</button>
         </div>
-        <div className="flex gap-4 mt-4 pt-4 border-t" style={{ borderColor: `${WARM}10` }}>
-          <div><div style={{ fontFamily: 'Geist Mono, monospace' }} className="text-sm font-600 text-white">{formatKES(totalStaked)}</div><div className="text-[10px] text-white/35 mt-0.5">Total traded</div></div>
+        <div className="flex gap-4 mt-4 pt-4 border-t flex-wrap" style={{ borderColor: `${WARM}10` }}>
+          <div><div style={{ fontFamily: 'Geist Mono, monospace' }} className="text-sm font-600 text-white">{open.length}</div><div className="text-[10px] text-white/35 mt-0.5">Open positions</div></div>
+          <div><div style={{ fontFamily: 'Geist Mono, monospace' }} className="text-sm font-600 text-white">{formatKES(totalStaked)}</div><div className="text-[10px] text-white/35 mt-0.5">Total staked</div></div>
           <div><div style={{ fontFamily: 'Geist Mono, monospace' }} className="text-sm font-600 text-white">{formatKES(totalWon)}</div><div className="text-[10px] text-white/35 mt-0.5">Total won</div></div>
           <div><div style={{ fontFamily: 'Geist Mono, monospace', color: totalWon - totalStaked >= 0 ? '#4ADE80' : ORANGE }} className="text-sm font-600">{totalWon - totalStaked >= 0 ? '+' : ''}{formatKES(totalWon - totalStaked)}</div><div className="text-[10px] text-white/35 mt-0.5">Net P&L</div></div>
         </div>
       </div>
+      <PortfolioTable trades={trades} onNavigate={onNavigate} onOpenCombo={onOpenCombo} />
+    </div>
+  )
+}
 
-      {isEmpty ? (
-        <div className="flex flex-col items-center justify-center gap-4 p-8 text-center">
-          <div style={{ fontFamily: 'Barlow Condensed, sans-serif', color: `${NAVY}10`, fontSize: 48, fontWeight: 800 }}>EMPTY</div>
-          <p className="text-sm" style={{ color: `${NAVY}35` }}>No active trades yet. Start predicting!</p>
-          <div className="flex gap-3 flex-wrap justify-center mt-1">
-            <button onClick={() => onNavigate('markets')} style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, boxShadow: BV_UP, background: WARM, border: `1px solid ${NAVY}20`, color: NAVY }} className="px-5 py-2.5 text-sm font-700 uppercase tracking-wider hover:brightness-95 transition-all">Trade Markets</button>
-            <button onClick={onOpenCombo} style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, boxShadow: BV_DK, background: '#6B21A8' }} className="px-5 py-2.5 text-sm font-700 uppercase tracking-wider text-white hover:brightness-110 transition-all flex items-center gap-2">
-              <span style={{ color: '#F7D000' }}>⚡</span> Start Combo
+type PortfolioFilter = 'all' | 'open' | 'won' | 'lost' | 'combos'
+
+const PORTFOLIO_FILTERS: { id: PortfolioFilter; label: string; match: (t: PortfolioTrade) => boolean }[] = [
+  { id: 'all', label: 'All', match: () => true },
+  { id: 'open', label: 'Open', match: t => t.status === 'open' },
+  { id: 'won', label: 'Won', match: t => t.status === 'won' },
+  { id: 'lost', label: 'Lost', match: t => t.status === 'lost' },
+  { id: 'combos', label: 'Combos', match: t => Boolean(t.isCombo) },
+]
+
+const TRADE_STATUS: Record<PortfolioTrade['status'], { label: string; bg: string; fg: string }> = {
+  open: { label: 'Open', bg: SKY, fg: NAVY },
+  won: { label: 'Won', bg: '#EBF7EE', fg: '#1F6B45' },
+  lost: { label: 'Lost', bg: '#FBEAEA', fg: '#8B1A1A' },
+  resolved: { label: 'Resolved', bg: MINERAL, fg: `${NAVY}80` },
+}
+
+function potentialReturn(t: PortfolioTrade): number {
+  if (t.status === 'won') return t.payout ?? 0
+  if (t.status === 'lost') return 0
+  return Math.round(estimatePayout(t.stake, t.odds))
+}
+
+function TradeStatusPill({ status }: { status: PortfolioTrade['status'] }) {
+  const s = TRADE_STATUS[status]
+  return (
+    <span className="inline-block px-2 py-0.5 text-[10px] font-700 uppercase tracking-wider whitespace-nowrap" style={{ background: s.bg, color: s.fg, borderRadius: 2, border: `1px solid ${s.fg}25`, fontFamily: 'Barlow Condensed, sans-serif' }}>{s.label}</span>
+  )
+}
+
+function PortfolioTable({ trades, onNavigate, onOpenCombo }: { trades: PortfolioTrade[]; onNavigate: (v: View) => void; onOpenCombo: () => void }) {
+  const [filter, setFilter] = useState<PortfolioFilter>('all')
+  const active = PORTFOLIO_FILTERS.find(f => f.id === filter)!
+  const rows = trades.filter(active.match)
+  const head = 'text-[10px] uppercase tracking-widest font-600 text-white/45 px-3 py-2'
+
+  return (
+    <div>
+      {/* Filter pills */}
+      <div className="flex gap-1.5 overflow-x-auto px-3 sm:px-4 py-3 border-b" style={{ background: WARM, borderColor: `${NAVY}12` }}>
+        {PORTFOLIO_FILTERS.map(f => {
+          const count = trades.filter(f.match).length
+          const on = filter === f.id
+          return (
+            <button
+              key={f.id}
+              onClick={() => setFilter(f.id)}
+              style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 999, background: on ? NAVY : WARM, color: on ? WARM : `${NAVY}70`, border: `1px solid ${on ? NAVY : NAVY + '22'}`, boxShadow: on ? BV_DK : BV_UP }}
+              className="px-3.5 py-1.5 text-xs font-700 uppercase tracking-wider whitespace-nowrap shrink-0 flex items-center gap-1.5 transition-all"
+            >
+              {f.label}
+              <span className="px-1.5 text-[10px] font-700" style={{ borderRadius: 999, background: on ? ORANGE : `${NAVY}12`, color: on ? '#fff' : `${NAVY}70` }}>{count}</span>
             </button>
+          )
+        })}
+      </div>
+
+      {rows.length === 0 ? (
+        <div className="flex flex-col items-center justify-center gap-3 p-8 text-center">
+          <p className="text-sm" style={{ color: `${NAVY}50` }}>{filter === 'all' ? 'No trades yet. Start predicting!' : `No ${active.label.toLowerCase()} trades.`}</p>
+          <div className="flex gap-2 flex-wrap justify-center">
+            <button onClick={() => onNavigate('markets')} style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, boxShadow: BV_UP, background: WARM, border: `1px solid ${NAVY}20`, color: NAVY }} className="px-4 py-2 text-xs font-700 uppercase tracking-wider">Browse Markets</button>
+            <button onClick={onOpenCombo} style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, boxShadow: BV_DK, background: '#6B21A8' }} className="px-4 py-2 text-xs font-700 uppercase tracking-wider text-white">Start Combo</button>
           </div>
         </div>
       ) : (
         <>
-          {open.length > 0 && (
-            <>
-              <div className="px-4 py-2 border-b" style={{ background: NAVY, borderColor: `${NAVY}22` }}>
-                <span style={{ fontFamily: 'Barlow Condensed, sans-serif' }} className="text-[10px] uppercase tracking-widest text-white/40 font-600">Open Positions ({open.length})</span>
-              </div>
-              {open.map((t, i) => (
-                <div key={t.id} className="flex items-center gap-3 px-4 py-3 border-b" style={{ background: i % 2 === 0 ? WARM : SKY, borderColor: `${NAVY}10` }}>
-                  {t.isCombo
-                    ? <span className="text-lg shrink-0">🔗</span>
-                    : <span className="text-lg shrink-0">📋</span>}
-                  <div className="flex-1 min-w-0">
-                    <div className="text-xs font-500 truncate" style={{ color: NAVY }}>{t.market}</div>
-                    <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                      <span className="text-xs font-700 px-2 py-0.5 text-white" style={{ background: t.isCombo ? '#6B21A8' : NAVY, borderRadius: 2, fontFamily: 'Barlow Condensed, sans-serif' }}>{t.position}</span>
-                      {!t.isCombo && <span className="text-[10px]" style={{ color: `${NAVY}45` }}>{t.odds}% odds</span>}
-                      {t.isCombo && <span className="text-[10px]" style={{ color: '#6B21A8' }}>{t.comboLegs} legs</span>}
-                    </div>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <div style={{ fontFamily: 'Geist Mono, monospace', color: NAVY }} className="text-sm font-600">{formatKES(t.stake)}</div>
-                    <div className="text-[10px]" style={{ color: `${NAVY}40` }}>{t.date}</div>
-                  </div>
-                </div>
+          {/* Desktop table */}
+          <table className="hidden md:table w-full text-left border-collapse">
+            <thead style={{ background: NAVY, fontFamily: 'Barlow Condensed, sans-serif' }}>
+              <tr>
+                <th className={head}>Market</th>
+                <th className={head}>Position / Outcome</th>
+                <th className={`${head} text-right`}>Entry Odds</th>
+                <th className={`${head} text-right`}>Stake (KES)</th>
+                <th className={`${head} text-right`}>Potential Return (KES)</th>
+                <th className={head}>Status</th>
+                <th className={`${head} text-right`}>Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((t, i) => (
+                <tr key={t.id} className="border-b" style={{ background: i % 2 === 0 ? WARM : SKY, borderColor: `${NAVY}10` }}>
+                  <td className="px-3 py-2.5 text-xs max-w-[320px]" style={{ color: NAVY }}>
+                    <div className="truncate">{t.market}</div>
+                    {t.isCombo && <div className="text-[10px] mt-0.5" style={{ color: '#6B21A8' }}>Combo · {t.comboLegs} legs</div>}
+                  </td>
+                  <td className="px-3 py-2.5"><span className="text-xs font-700 px-2 py-0.5 text-white" style={{ background: t.isCombo ? '#6B21A8' : NAVY, borderRadius: 2, fontFamily: 'Barlow Condensed, sans-serif' }}>{t.position}</span></td>
+                  <td className="px-3 py-2.5 text-xs text-right" style={{ fontFamily: 'Geist Mono, monospace', color: NAVY }}>{t.isCombo ? '—' : `${t.odds}%`}</td>
+                  <td className="px-3 py-2.5 text-xs text-right" style={{ fontFamily: 'Geist Mono, monospace', color: NAVY }}>{t.stake.toLocaleString()}</td>
+                  <td className="px-3 py-2.5 text-xs text-right font-700" style={{ fontFamily: 'Geist Mono, monospace', color: t.status === 'lost' ? `${NAVY}45` : '#1F6B45' }}>{potentialReturn(t).toLocaleString()}</td>
+                  <td className="px-3 py-2.5"><TradeStatusPill status={t.status} /></td>
+                  <td className="px-3 py-2.5 text-[11px] text-right whitespace-nowrap" style={{ color: `${NAVY}55` }}>{t.date}</td>
+                </tr>
               ))}
-            </>
-          )}
-          {resolved.length > 0 && (
-            <>
-              <div className="px-4 py-2 border-b" style={{ background: '#1A3A2A', borderColor: `${NAVY}22` }}>
-                <span style={{ fontFamily: 'Barlow Condensed, sans-serif' }} className="text-[10px] uppercase tracking-widest text-white/40 font-600">Resolved ({resolved.length})</span>
-              </div>
-              {resolved.map((t, i) => (
-                <div key={t.id} className="flex items-center gap-3 px-4 py-3 border-b" style={{ background: i % 2 === 0 ? WARM : SKY, borderColor: `${NAVY}10` }}>
-                  <span className="text-lg shrink-0">{t.status === 'won' ? '✅' : '❌'}</span>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-xs font-500 truncate" style={{ color: NAVY }}>{t.market}</div>
-                    <div className="flex items-center gap-1.5 mt-0.5">
-                      <span className="text-xs font-700 px-2 py-0.5 text-white" style={{ background: t.status === 'won' ? '#2A6B3A' : '#6B1A1A', borderRadius: 2, fontFamily: 'Barlow Condensed, sans-serif' }}>{t.position}</span>
-                    </div>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <div style={{ fontFamily: 'Geist Mono, monospace', color: t.status === 'won' ? '#2A6B3A' : `${NAVY}40`, fontWeight: 700 }} className="text-sm">{t.status === 'won' ? '+' : '-'}{formatKES(t.status === 'won' ? (t.payout ?? 0) : t.stake)}</div>
-                    <div className="text-[10px]" style={{ color: `${NAVY}35` }}>{t.status === 'won' ? 'Won' : 'Lost'} · {t.date}</div>
-                  </div>
+            </tbody>
+          </table>
+
+          {/* Mobile cards */}
+          <div className="md:hidden p-3 space-y-2">
+            {rows.map(t => (
+              <div key={t.id} className="border p-3" style={{ background: WARM, borderRadius: 4, borderColor: `${NAVY}15` }}>
+                <div className="flex items-start gap-2">
+                  <div className="text-xs font-500 flex-1 min-w-0 leading-snug" style={{ color: NAVY }}>{t.market}</div>
+                  <div className="shrink-0"><TradeStatusPill status={t.status} /></div>
                 </div>
-              ))}
-            </>
-          )}
+                <div className="grid grid-cols-2 gap-x-3 gap-y-2 mt-2.5 pt-2.5 border-t" style={{ borderColor: `${NAVY}10` }}>
+                  {[
+                    ['Position', t.isCombo ? `${t.position} · ${t.comboLegs} legs` : t.position],
+                    ['Entry odds', t.isCombo ? '—' : `${t.odds}%`],
+                    ['Stake', formatKES(t.stake)],
+                    ['Potential return', formatKES(potentialReturn(t))],
+                  ].map(([label, value]) => (
+                    <div key={label} className="min-w-0">
+                      <div className="text-[9px] uppercase tracking-widest font-600" style={{ fontFamily: 'Barlow Condensed, sans-serif', color: `${NAVY}45` }}>{label}</div>
+                      <div className="text-xs font-600 truncate" style={{ fontFamily: 'Geist Mono, monospace', color: label === 'Potential return' && t.status !== 'lost' ? '#1F6B45' : NAVY }}>{value}</div>
+                    </div>
+                  ))}
+                </div>
+                <div className="text-[10px] mt-2" style={{ color: `${NAVY}45` }}>{t.date}</div>
+              </div>
+            ))}
+          </div>
         </>
       )}
     </div>
@@ -1530,6 +1691,8 @@ function PolkaAppInner() {
     fn()
   }
   const [balance, setBalance] = useState(MOCK_PROFILE.balance)
+  const [markets, setMarkets] = useState<Market[]>(MARKETS)
+  const [infoTab, setInfoTab] = useState<InfoTab | null>(null)
 
   // Navigation
   const [activeView, setActiveView] = useState<View>('markets')
@@ -1556,6 +1719,19 @@ function PolkaAppInner() {
   const [portfolio, setPortfolio] = useState<PortfolioTrade[]>(INITIAL_PORTFOLIO)
   const [walletEntries, setWalletEntries] = useState<WalletEntry[]>(INITIAL_WALLET)
 
+  const goTo = (v: View) => {
+    if (PRIVATE_VIEWS.includes(v)) requireAuth(`Sign in to open your ${v}`, () => setActiveView(v))
+    else setActiveView(v)
+  }
+  useEffect(() => {
+    if (!isSignedIn && PRIVATE_VIEWS.includes(activeView)) setActiveView('markets')
+  }, [isSignedIn, activeView])
+  useEffect(() => {
+    const id = Number(new URLSearchParams(window.location.search).get('market'))
+    const m = MARKETS.find(x => x.id === id)
+    if (m) setSelectedMarket(m)
+  }, [])
+
   // Custom categories
   const [customCategories, setCustomCategories] = useState<CustomCategory[]>([])
 
@@ -1570,13 +1746,13 @@ function PolkaAppInner() {
   )
   const feedFilter = FEED_FILTERS.some(f => f.id === activeCategory) ? String(activeCategory) : null
   const filterCounts: Record<string, number> = {
-    my: MARKETS.filter(m => myMarketIds.has(m.id)).length,
-    closed: MARKETS.filter(m => !m.isResolved && marketStatus(m) === 'closed').length,
-    resolved: MARKETS.filter(m => Boolean(m.isResolved)).length,
+    my: markets.filter(m => myMarketIds.has(m.id)).length,
+    closed: markets.filter(m => !m.isResolved && marketStatus(m) === 'closed').length,
+    resolved: markets.filter(m => Boolean(m.isResolved)).length,
     disputed: 0,
   }
 
-  const filteredMarkets = MARKETS
+  const filteredMarkets = markets
     .filter(m => {
       if (feedFilter === 'my') return myMarketIds.has(m.id)
       if (feedFilter === 'closed') return !m.isResolved && marketStatus(m) === 'closed'
@@ -1593,7 +1769,7 @@ function PolkaAppInner() {
       return b.volume - a.volume
     })
 
-  const liveCount = MARKETS.filter(m => m.isLive && !m.isResolved).length
+  const liveCount = markets.filter(m => m.isLive && !m.isResolved).length
 
   // ── Combo actions
   const addToCombo = (market: Market, position: string, odds: number, customAmount?: number) => {
@@ -1678,6 +1854,30 @@ function PolkaAppInner() {
     setActiveView('portfolio')
   }
 
+  const publishMarket = (market: Market, seed: number) => {
+    if (balance < seed) {
+      push(`Insufficient balance — deposit at least ${formatKES(seed - balance)} to fund this market`, 'warn')
+      setShowDeposit(true)
+      return
+    }
+    const entry: WalletEntry = {
+      id: `w${Date.now()}`,
+      type: 'seed',
+      amount: seed,
+      description: `Market seed — ${market.question}`,
+      date: 'Just now',
+      status: 'completed',
+      sign: '-',
+    }
+    setBalance(b => b - seed)
+    setWalletEntries(ws => [entry, ...ws])
+    setMarkets(ms => [market, ...ms])
+    setShowCreate(false)
+    setActiveCategory('All')
+    setActiveView('markets')
+    push('Market published — now live in the feed')
+  }
+
   const handleDeposit = (amount: number) => {
     const entry: WalletEntry = {
       id: `w${Date.now()}`,
@@ -1735,7 +1935,7 @@ function PolkaAppInner() {
             ] as { key: View; label: string }[]).map(({ key, label }) => (
               <button
                 key={key}
-                onClick={() => setActiveView(key)}
+                onClick={() => goTo(key)}
                 style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 2 }}
                 className={`px-3 py-1.5 text-sm font-600 uppercase tracking-wider whitespace-nowrap transition-colors ${activeView === key ? 'bg-white/10 text-white' : 'text-white/50 hover:text-white'}`}
               >
@@ -1776,22 +1976,13 @@ function PolkaAppInner() {
                 Deposit
               </button>
             ) : (
-              <>
-                <button
-                  onClick={() => setShowSignIn(true)}
-                  style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, border: '1px solid rgba(255,255,255,0.18)' }}
-                  className="px-3 py-1.5 text-sm font-600 text-white hover:bg-white/10 transition-colors"
-                >
-                  Sign In
-                </button>
-                <button
-                  onClick={() => setAuthPrompt('Create your account to start predicting')}
-                  style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, boxShadow: BV_DK, background: '#2A9D4A' }}
-                  className="px-3 py-1.5 text-sm font-700 uppercase tracking-wider text-white hover:brightness-110 transition-all"
-                >
-                  Register
-                </button>
-              </>
+              <button
+                onClick={() => setShowSignIn(true)}
+                style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, boxShadow: BV_DK, background: ORANGE }}
+                className="px-4 py-1.5 text-sm font-700 uppercase tracking-wider text-white hover:brightness-110 transition-all"
+              >
+                Sign In
+              </button>
             )}
             {/* Hamburger */}
             <button
@@ -1815,7 +2006,7 @@ function PolkaAppInner() {
           ] as { key: View; label: string; Icon: typeof NavIcons.markets }[]).map(({ key, label, Icon }) => (
             <button
               key={key}
-              onClick={() => setActiveView(key)}
+              onClick={() => goTo(key)}
               className="flex-1 flex flex-col items-center py-2 transition-colors"
               style={{ color: activeView === key ? '#F7D000' : 'rgba(255,255,255,0.35)' }}
             >
@@ -1834,7 +2025,7 @@ function PolkaAppInner() {
               <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: ORANGE }} />
               <span style={{ fontFamily: 'Barlow Condensed, sans-serif', color: ORANGE }} className="text-[11px] font-700 uppercase tracking-widest whitespace-nowrap">{liveCount} Live</span>
             </span>
-            {MARKETS.filter(m => m.isLive && !m.isResolved).map(m => (
+            {markets.filter(m => m.isLive && !m.isResolved).map(m => (
               <button key={m.id} onClick={() => setSelectedMarket(m)} className="shrink-0 flex items-center gap-1.5 text-[11px] hover:text-[#152B43] transition-colors whitespace-nowrap" style={{ color: `${NAVY}65` }}>
                 <span className="max-w-[130px] truncate">{m.question}</span>
                 <span style={{ fontFamily: 'Geist Mono, monospace', color: NAVY, fontWeight: 600 }}>{m.yesOdds}%</span>
@@ -1874,7 +2065,7 @@ function PolkaAppInner() {
             </div>
             <div className="p-2.5 border-t" style={{ borderColor: `${NAVY}10` }}>
               <div style={{ fontFamily: 'Barlow Condensed, sans-serif', color: `${NAVY}35` }} className="text-[10px] uppercase tracking-widest font-600 mb-1.5 px-1">Platform</div>
-              {[{ label: 'Markets', val: MARKETS.length }, { label: 'Live', val: liveCount }, { label: 'Traders', val: '14.2K' }].map(({ label, val }) => (
+              {[{ label: 'Markets', val: markets.length }, { label: 'Live', val: liveCount }, { label: 'Traders', val: '14.2K' }].map(({ label, val }) => (
                 <div key={label} className="flex justify-between px-2 py-1.5 text-xs">
                   <span style={{ color: `${NAVY}45` }}>{label}</span>
                   <span style={{ fontFamily: 'Geist Mono, monospace', color: NAVY, fontWeight: 500 }}>{val}</span>
@@ -2067,8 +2258,11 @@ function PolkaAppInner() {
           <div className="flex gap-3 ml-auto flex-wrap">
             {[
               { label: 'Terms', action: () => setShowTerms(true) },
-              { label: 'How It Works', action: () => setShowTutorial(true) },
-              { label: 'FAQ', action: () => {} },
+              { label: 'How It Works', action: () => setInfoTab('how') },
+              { label: 'FAQ', action: () => setInfoTab('how') },
+              { label: 'Responsible Trading', action: () => setInfoTab('responsible') },
+              { label: 'Privacy', action: () => setInfoTab('terms') },
+              { label: 'Support', action: () => setInfoTab('support') },
             ].map(({ label, action }) => (
               <button key={label} onClick={action} className="text-[10px] uppercase tracking-wider whitespace-nowrap transition-colors hover:opacity-80" style={{ fontFamily: 'Barlow Condensed, sans-serif', color: `${WARM}35` }}>
                 {label}
@@ -2111,9 +2305,10 @@ function PolkaAppInner() {
         onClose={() => setMenuOpen(false)}
         isSignedIn={isSignedIn}
         balance={balance}
-        onNavigate={setActiveView}
+        onNavigate={goTo}
         onSignIn={() => setShowSignIn(true)}
-        onSignOut={() => setIsSignedIn(false)}
+        onSignOut={() => { setIsSignedIn(false); setActiveView('markets') }}
+        onInfo={() => setInfoTab('how')}
         onDeposit={() => requireAuth("Sign in to deposit funds", () => setShowDeposit(true))}
         onCreate={() => requireAuth("Sign in to create a market", () => setShowCreate(true))}
         activeView={activeView}
@@ -2130,7 +2325,14 @@ function PolkaAppInner() {
           myTrades={portfolio}
         />
       )}
-      {showCreate && <CreateMarket onClose={() => setShowCreate(false)} />}
+      {showCreate && <CreateMarket balance={balance} onClose={() => setShowCreate(false)} onPublish={publishMarket} />}
+      {infoTab && (
+        <InfoModal
+          initialTab={infoTab}
+          onClose={() => setInfoTab(null)}
+          onOpenTutorial={() => { setInfoTab(null); setShowTutorial(true) }}
+        />
+      )}
       {showTerms && <TermsView onClose={() => setShowTerms(false)} />}
       {(showSignIn || authPrompt !== null) && (
         <AuthModal
