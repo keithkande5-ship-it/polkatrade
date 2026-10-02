@@ -93,11 +93,26 @@ export function comboMath(numPositions: number, addedAmount: number, positions: 
 
 /**
  * Market creation seed split.
- * 149 KES is split across YES/NO pools according to creator's starting odds.
+ * The seed is split across every outcome pool in proportion to its starting
+ * odds; pools always sum to exactly the seed amount (largest-remainder rounding).
+ * Pass a single YES probability for binary markets, or one odds value per outcome.
  */
-export function seedSplit(startingOdds: number) {
-  const seed = 149
-  const yesPool = Math.round(seed * (startingOdds / 100))
-  const noPool = seed - yesPool
-  return { seed, yesPool, noPool }
+export function seedSplit(startingOdds: number | number[], numOutcomes = 2, seedAmount = 100) {
+  const seed = Math.max(0, Math.round(seedAmount))
+  const n = Math.max(2, Array.isArray(startingOdds) ? Math.max(numOutcomes, startingOdds.length) : numOutcomes)
+  const weights: number[] = Array.isArray(startingOdds)
+    ? startingOdds.slice(0, n)
+    : n === 2 ? [startingOdds, 100 - startingOdds] : Array.from({ length: n }, () => 100 / n)
+  while (weights.length < n) weights.push(0)
+  const safe = weights.map(w => (Number.isFinite(w) && w > 0 ? w : 0))
+  const total = safe.reduce((s, w) => s + w, 0)
+  const raw = safe.map(w => (total > 0 ? (seed * w) / total : seed / n))
+  const pools = raw.map(r => Math.floor(r))
+  let remainder = seed - pools.reduce((a, b) => a + b, 0)
+  const order = raw.map((r, i) => ({ i, f: r - Math.floor(r) })).sort((a, b) => b.f - a.f)
+  for (let k = 0; remainder > 0; k++, remainder--) {
+    const idx = order[k % n]!.i
+    pools[idx] = (pools[idx] ?? 0) + 1
+  }
+  return { seed, pools, yesPool: pools[0] ?? 0, noPool: pools[1] ?? 0 }
 }

@@ -66,3 +66,5 @@ export type CustomCategory = {
   label: string
   emoji: string
 }
+
+export type InfoTab = 'how' | 'responsible' | 'terms' | 'support'
