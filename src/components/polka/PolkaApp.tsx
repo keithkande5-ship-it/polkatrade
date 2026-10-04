@@ -1699,17 +1699,26 @@ function BrandSplash() {
 function PolkaAppInner() {
   const { push } = useToasts()
   const { bump } = useLive()
+  const { mode: oddsMode, toggle: toggleOdds } = useOddsMode()
   const [showTutorial, setShowTutorial] = useState(false)
   const [showWithdraw, setShowWithdraw] = useState(false)
   // Auth & balance
   const [isSignedIn, setIsSignedIn] = useState(false)
   const [userPhone, setUserPhone] = useState('')
+  const [profile, setProfile] = useState<PolkaProfile>(DEFAULT_PROFILE)
+  const [settings, setSettings] = useState<PolkaSettings>(DEFAULT_SETTINGS)
+  const [hydrated, setHydrated] = useState(false)
+  const [walletUnread, setWalletUnread] = useState(0)
+  const [alerts, setAlerts] = useState<{ id: string; title: string; body: string; read: boolean }[]>([])
+  const [progress, setProgress] = useState(false)
+  const [pendingTrade, setPendingTrade] = useState<{ market: Market; position: string; odds: number; amount: number } | null>(null)
+  const [demoPassword, setDemoPassword] = useState('')
   const [authPrompt, setAuthPrompt] = useState<string | null>(null)
   const requireAuth = (reason: string, fn: () => void) => {
     if (!isSignedIn) { setAuthPrompt(reason); return }
     fn()
   }
-  const [balance, setBalance] = useState(MOCK_PROFILE.balance)
+  const [balance, setBalance] = useState(0)
   const [markets, setMarkets] = useState<Market[]>(MARKETS)
   const [infoTab, setInfoTab] = useState<InfoTab | null>(null)
 
@@ -1735,21 +1744,49 @@ function PolkaAppInner() {
   const [newlyAdded, setNewlyAdded] = useState<number[]>([])
 
   // Portfolio & wallet
-  const [portfolio, setPortfolio] = useState<PortfolioTrade[]>(INITIAL_PORTFOLIO)
-  const [walletEntries, setWalletEntries] = useState<WalletEntry[]>(INITIAL_WALLET)
+  const [portfolio, setPortfolio] = useState<PortfolioTrade[]>([])
+  const [walletEntries, setWalletEntries] = useState<WalletEntry[]>([])
+
+  useEffect(() => {
+    const savedProfile = readSaved('polka_profile', DEFAULT_PROFILE, isProfile)
+    setProfile(savedProfile)
+    setIsSignedIn(savedProfile.signedIn)
+    setUserPhone(savedProfile.phone)
+    setSettings(readSaved('polka_settings', DEFAULT_SETTINGS, isSettings))
+    setBalance(savedProfile.signedIn ? readSaved('polka_balance', 0, (v): v is number => typeof v === 'number' && Number.isFinite(v) && v >= 0) : 0)
+    setPortfolio(savedProfile.signedIn ? readSaved('polka_portfolio_trades', [], (v): v is PortfolioTrade[] => isArrayOf(v, isPortfolioTrade)) : [])
+    setWalletEntries(savedProfile.signedIn ? readSaved('polka_wallet_entries', [], (v): v is WalletEntry[] => isArrayOf(v, isWalletEntry)) : [])
+    const created = readSaved('polka_created_markets', [], (v): v is Market[] => isArrayOf(v, isMarket))
+    setMarkets([...created, ...MARKETS.filter(m => !created.some(c => c.id === m.id))])
+    setHydrated(true)
+  }, [])
+  useEffect(() => { if (hydrated) localStorage.setItem('polka_profile', JSON.stringify({ ...profile, signedIn: isSignedIn, phone: userPhone, oddsFormat: oddsMode })) }, [profile, isSignedIn, userPhone, oddsMode, hydrated])
+  useEffect(() => { if (hydrated && isSignedIn) { localStorage.setItem('polka_balance', JSON.stringify(balance)); localStorage.setItem('polka_wallet_entries', JSON.stringify(walletEntries)); localStorage.setItem('polka_portfolio_trades', JSON.stringify(portfolio)) } }, [balance, walletEntries, portfolio, hydrated, isSignedIn])
+  useEffect(() => { if (hydrated) localStorage.setItem('polka_created_markets', JSON.stringify(markets.filter(m => !MARKETS.some(original => original.id === m.id)))) }, [markets, hydrated])
+  useEffect(() => { if (hydrated) localStorage.setItem('polka_settings', JSON.stringify(settings)) }, [settings, hydrated])
+  useEffect(() => { if (hydrated && oddsMode !== profile.oddsFormat) toggleOdds() }, [hydrated])
+  useEffect(() => {
+    document.title = selectedMarket ? `${selectedMarket.question} · Polka.trade` : PAGE_TITLE
+    return () => { document.title = PAGE_TITLE }
+  }, [selectedMarket])
+  useEffect(() => { if (!hydrated) return; setProgress(true); const timer = setTimeout(() => setProgress(false), 300); return () => clearTimeout(timer) }, [activeView, selectedMarket?.id, portfolio.length, hydrated])
+  const openMarket = (market: Market) => { setSelectedMarket(market); window.history.replaceState(null, '', `?market=${market.id}`) }
+  const closeMarket = () => { setSelectedMarket(null); window.history.replaceState(null, '', window.location.pathname) }
+  const notify = (title: string, body: string) => setAlerts(a => [{ id: crypto.randomUUID(), title, body, read: false }, ...a])
 
   const goTo = (v: View) => {
-    if (PRIVATE_VIEWS.includes(v)) requireAuth(`Sign in to open your ${v}`, () => setActiveView(v))
-    else setActiveView(v)
+    const navigate = () => { setActiveView(v); if (v === 'wallet') setWalletUnread(0); if (v === 'notifications') setAlerts(a => a.map(n => ({ ...n, read: true }))) }
+    if (PRIVATE_VIEWS.includes(v)) requireAuth(`Sign in to open your ${v}`, navigate)
+    else navigate()
   }
   useEffect(() => {
     if (!isSignedIn && PRIVATE_VIEWS.includes(activeView)) setActiveView('markets')
   }, [isSignedIn, activeView])
   useEffect(() => {
     const id = Number(new URLSearchParams(window.location.search).get('market'))
-    const m = MARKETS.find(x => x.id === id)
+    const m = markets.find(x => x.id === id)
     if (m) setSelectedMarket(m)
-  }, [])
+  }, [markets])
 
   // Custom categories
   const [customCategories, setCustomCategories] = useState<CustomCategory[]>([])
