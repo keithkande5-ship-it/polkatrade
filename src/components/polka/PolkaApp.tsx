@@ -2382,7 +2382,7 @@ function PolkaAppInner() {
         balance={balance}
         onNavigate={goTo}
         onSignIn={() => setShowSignIn(true)}
-        onSignOut={() => { setIsSignedIn(false); setActiveView('markets') }}
+        onSignOut={() => { setIsSignedIn(false); setProfile(DEFAULT_PROFILE); setBalance(0); setWalletEntries([]); setPortfolio([]); setActiveView('markets'); localStorage.removeItem('polka_balance'); localStorage.removeItem('polka_wallet_entries'); localStorage.removeItem('polka_portfolio_trades') }}
         onInfo={() => setInfoTab('how')}
         onDeposit={() => requireAuth("Sign in to deposit funds", () => setShowDeposit(true))}
         onCreate={() => requireAuth("Sign in to create a market", () => setShowCreate(true))}
@@ -2402,6 +2402,7 @@ function PolkaAppInner() {
           myTrades={isSignedIn ? portfolio : []}
         />
       )}
+      {pendingTrade && <div className="fixed inset-0 z-[85] flex items-center justify-center p-4" style={{ background: `${NAVY}90` }} onClick={() => setPendingTrade(null)}><div role="dialog" aria-label="Confirm Trade" className="w-full max-w-sm p-5 space-y-4" style={{ background: WARM, borderRadius: 4 }} onClick={e => e.stopPropagation()}><h2 className="text-lg font-700" style={{ color: NAVY }}>Confirm prediction</h2><p className="text-sm" style={{ color: NAVY }}>{pendingTrade.position} · {pendingTrade.market.question}</p><p className="text-sm" style={{ color: NAVY }}>Stake: {formatKES(pendingTrade.amount)}</p><div className="flex gap-2"><button onClick={() => setPendingTrade(null)} className="flex-1 border py-2" style={{ borderRadius: 3 }}>Cancel</button><button onClick={() => { const trade = pendingTrade; setPendingTrade(null); confirmTrade(trade.market, trade.position, trade.odds, trade.amount) }} className="flex-1 py-2 text-white" style={{ background: '#2A7B6F', borderRadius: 3 }}>Confirm Trade</button></div></div></div>}
       {showCreate && <CreateMarket balance={balance} onClose={() => setShowCreate(false)} onPublish={publishMarket} />}
       {infoTab && (
         <InfoModal
