@@ -310,9 +310,11 @@ type SideMenuProps = {
   onCreate: () => void
   onInfo: () => void
   activeView: View
+  profile: PolkaProfile
+  badges: { portfolio: number; wallet: number; notifications: number }
 }
 
-function SideMenu({ open, onClose, isSignedIn, balance, onNavigate, onSignIn, onSignOut, onDeposit, onCreate, onInfo, activeView }: SideMenuProps) {
+function SideMenu({ open, onClose, isSignedIn, balance, onNavigate, onSignIn, onSignOut, onDeposit, onCreate, onInfo, activeView, profile, badges }: SideMenuProps) {
   if (!open) return null
   const nav = (v: View, label: string, icon: string) => (
     <button
@@ -322,6 +324,7 @@ function SideMenu({ open, onClose, isSignedIn, balance, onNavigate, onSignIn, on
     >
       <span className="text-base w-5 text-center shrink-0">{icon}</span>
       <span className="font-500 flex-1" style={{ color: NAVY }}>{label}</span>
+      {isSignedIn && (v === 'portfolio' || v === 'wallet' || v === 'notifications') && <CountBadge count={badges[v]} />}
       {!isSignedIn && PRIVATE_VIEWS.includes(v) && <Lock size={13} style={{ color: `${NAVY}55` }} aria-label="Sign in required" />}
     </button>
   )
@@ -334,9 +337,9 @@ function SideMenu({ open, onClose, isSignedIn, balance, onNavigate, onSignIn, on
           <button onClick={onClose} className="absolute top-4 right-4 text-white/40 hover:text-white text-xl">×</button>
           {isSignedIn ? (
             <div>
-              <div className="w-12 h-12 rounded-full flex items-center justify-center text-lg font-700 text-white mb-2" style={{ background: ORANGE, boxShadow: BV_DK }}>N</div>
-              <div style={{ fontFamily: 'Barlow Condensed, sans-serif' }} className="text-white font-700 text-base">NJERI KAMAU</div>
-              <div className="text-white/40 text-xs">njeri.k@email.com</div>
+              <div className="w-12 h-12 rounded-full flex items-center justify-center text-lg font-700 text-white mb-2" style={{ background: ORANGE, boxShadow: BV_DK }}>{profile.name[0]?.toUpperCase()}</div>
+              <div style={{ fontFamily: 'Barlow Condensed, sans-serif' }} className="text-white font-700 text-base">{profile.name}</div>
+              <div className="text-white/40 text-xs">{profile.email}</div>
               <div className="mt-3 flex items-center gap-2">
                 <span style={{ fontFamily: 'Geist Mono, monospace' }} className="text-white font-600 text-sm">{formatKES(balance)}</span>
                 <button onClick={onDeposit} style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, background: '#F7D000', boxShadow: BV_DK, color: '#6B21A8' }} className="px-2.5 py-1 text-xs font-700 uppercase tracking-wider">+ Deposit</button>
