@@ -38,11 +38,11 @@ function readSaved<T>(key: string, fallback: T, valid: (value: unknown) => value
   } catch { return fallback }
 }
 function isRecord(value: unknown): value is Record<string, unknown> { return Boolean(value) && typeof value === 'object' && !Array.isArray(value) }
-const isProfile = (v: unknown): v is PolkaProfile => isRecord(v) && typeof v.name === 'string' && typeof v.email === 'string' && typeof v.phone === 'string' && typeof v.signedIn === 'boolean' && (v.oddsFormat === 'percent' || v.oddsFormat === 'multiplier')
-const isSettings = (v: unknown): v is PolkaSettings => isRecord(v) && typeof v.confirmTrade === 'boolean' && typeof v.autoAddToMultiSlip === 'boolean' && typeof v.leaderboardPublic === 'boolean'
-const isMarket = (v: unknown): v is Market => isRecord(v) && typeof v.id === 'number' && typeof v.question === 'string' && typeof v.yesOdds === 'number' && typeof v.noOdds === 'number' && typeof v.category === 'string'
-const isWalletEntry = (v: unknown): v is WalletEntry => isRecord(v) && typeof v.id === 'string' && typeof v.amount === 'number' && typeof v.description === 'string' && (v.status === 'completed' || v.status === 'pending')
-const isPortfolioTrade = (v: unknown): v is PortfolioTrade => isRecord(v) && typeof v.id === 'string' && typeof v.market === 'string' && typeof v.stake === 'number' && typeof v.status === 'string'
+const isProfile = (v: unknown): v is PolkaProfile => isRecord(v) && typeof v['name'] === 'string' && typeof v['email'] === 'string' && typeof v['phone'] === 'string' && typeof v['signedIn'] === 'boolean' && (v['oddsFormat'] === 'percent' || v['oddsFormat'] === 'multiplier')
+const isSettings = (v: unknown): v is PolkaSettings => isRecord(v) && typeof v['confirmTrade'] === 'boolean' && typeof v['autoAddToMultiSlip'] === 'boolean' && typeof v['leaderboardPublic'] === 'boolean'
+const isMarket = (v: unknown): v is Market => isRecord(v) && typeof v['id'] === 'number' && typeof v['question'] === 'string' && typeof v['yesOdds'] === 'number' && typeof v['noOdds'] === 'number' && typeof v['category'] === 'string'
+const isWalletEntry = (v: unknown): v is WalletEntry => isRecord(v) && typeof v['id'] === 'string' && typeof v['amount'] === 'number' && typeof v['description'] === 'string' && (v['status'] === 'completed' || v['status'] === 'pending')
+const isPortfolioTrade = (v: unknown): v is PortfolioTrade => isRecord(v) && typeof v['id'] === 'string' && typeof v['market'] === 'string' && typeof v['stake'] === 'number' && typeof v['status'] === 'string'
 const isArrayOf = <T,>(v: unknown, check: (item: unknown) => item is T): v is T[] => Array.isArray(v) && v.every(check)
 
 function CountBadge({ count }: { count: number }) {
