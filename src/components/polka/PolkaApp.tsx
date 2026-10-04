@@ -2353,7 +2353,7 @@ function PolkaAppInner() {
         balance={balance}
         onNavigate={goTo}
         onSignIn={() => setShowSignIn(true)}
-        onSignOut={() => { setIsSignedIn(false); setProfile(DEFAULT_PROFILE); setBalance(0); setWalletEntries([]); setPortfolio([]); setActiveView('markets'); localStorage.removeItem('polka_balance'); localStorage.removeItem('polka_wallet_entries'); localStorage.removeItem('polka_portfolio_trades') }}
+        onSignOut={() => { setIsSignedIn(false); setBalance(0); setWalletEntries([]); setPortfolio([]); setWalletUnread(0); setAlerts([]); setActiveView('markets') }}
         onInfo={() => setInfoTab('how')}
         onDeposit={() => requireAuth("Sign in to deposit funds", () => setShowDeposit(true))}
         onCreate={() => requireAuth("Sign in to create a market", () => setShowCreate(true))}
@@ -2387,7 +2387,7 @@ function PolkaAppInner() {
         <AuthModal
           reason={authPrompt ?? undefined}
           onClose={() => { setShowSignIn(false); setAuthPrompt(null) }}
-          onSuccess={p => { setProfile(old => ({ ...old, name: p.name, email: p.email, phone: p.phone, joined: old.joined || new Date().toLocaleDateString('en-KE', { month: 'long', year: 'numeric' }), signedIn: true })); setIsSignedIn(true); setUserPhone(p.phone); setShowSignIn(false); setAuthPrompt(null); push(`Welcome, ${p.name}`) }}
+          onSuccess={p => { const returning = profile.email.toLowerCase() === p.email.toLowerCase(); setProfile(old => ({ ...old, name: returning ? old.name : p.name, email: p.email, phone: p.phone, joined: returning ? old.joined : new Date().toLocaleDateString('en-KE', { month: 'long', year: 'numeric' }), signedIn: true })); setBalance(returning ? readSaved('polka_balance', 0, (v): v is number => typeof v === 'number' && Number.isFinite(v) && v >= 0) : 0); setPortfolio(returning ? readSaved('polka_portfolio_trades', [], (v): v is PortfolioTrade[] => isArrayOf(v, isPortfolioTrade)) : []); setWalletEntries(returning ? readSaved('polka_wallet_entries', [], (v): v is WalletEntry[] => isArrayOf(v, isWalletEntry)) : []); setIsSignedIn(true); setUserPhone(p.phone); setShowSignIn(false); setAuthPrompt(null); push(`Welcome, ${p.name}`) }}
         />
       )}
       {showDeposit && (
