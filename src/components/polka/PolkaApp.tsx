@@ -1529,14 +1529,14 @@ function ProfilePage({ profile, onSave }: { profile: PolkaProfile; onSave: (p: P
   )
 }
 
-function AccountPage({ profile, onPasswordChange }: { profile: PolkaProfile; onPasswordChange: (current: string, next: string) => boolean }) {
+function AccountPage({ profile, passwordIsSet, onPasswordChange }: { profile: PolkaProfile; passwordIsSet: boolean; onPasswordChange: (current: string, next: string) => boolean }) {
   const [open, setOpen] = useState(false)
   const [current, setCurrent] = useState('')
   const [next, setNext] = useState('')
   const [confirm, setConfirm] = useState('')
   const [error, setError] = useState('')
   const save = () => {
-    if (!current || next.length < 8 || next !== confirm) { setError('Enter your current password and a matching new password of at least 8 characters.'); return }
+    if ((passwordIsSet && !current) || next.length < 8 || next !== confirm) { setError('Enter a matching new password of at least 8 characters' + (passwordIsSet ? ' and your current password.' : '.')); return }
     if (!onPasswordChange(current, next)) { setError('Current password does not match.'); return }
     setOpen(false); setCurrent(''); setNext(''); setConfirm(''); setError('')
   }
@@ -1556,8 +1556,8 @@ function AccountPage({ profile, onPasswordChange }: { profile: PolkaProfile; onP
             </div>
           </div>
         ))}
-        <button onClick={() => setOpen(true)} className="flex items-center gap-2 px-4 py-2 border text-sm" style={{ color: NAVY, borderRadius: 3 }}><Lock size={15} /> Change Password</button>
-        {open && <div className="fixed inset-0 z-[85] flex items-center justify-center p-4" style={{ background: `${NAVY}90` }} onClick={() => setOpen(false)}><div role="dialog" aria-label="Change Password" className="w-full max-w-sm p-5 space-y-3" style={{ background: WARM, borderRadius: 4 }} onClick={e => e.stopPropagation()}><div className="flex justify-between"><h2 className="font-700" style={{ color: NAVY }}>Change Password</h2><button aria-label="Close" onClick={() => setOpen(false)}><X size={18} /></button></div>{[[current, setCurrent, 'Current Password'], [next, setNext, 'New Password'], [confirm, setConfirm, 'Confirm New Password']].map(([value, setter, label]) => <label key={label as string} className="block text-xs" style={{ color: NAVY }}>{label as string}<input type="password" value={value as string} onChange={e => (setter as (value: string) => void)(e.target.value)} className="w-full border px-3 py-2 mt-1" style={{ borderRadius: 3 }} /></label>)}{error && <p role="alert" className="text-xs" style={{ color: ORANGE }}>{error}</p>}<button onClick={save} className="w-full py-2 text-white" style={{ background: '#2A7B6F', borderRadius: 3 }}>Save Password</button></div></div>}
+        <button onClick={() => setOpen(true)} className="flex items-center gap-2 px-4 py-2 border text-sm" style={{ color: NAVY, borderRadius: 3 }}><Lock size={15} /> {passwordIsSet ? 'Change' : 'Set'} Demo Password</button>
+        {open && <div className="fixed inset-0 z-[85] flex items-center justify-center p-4" style={{ background: `${NAVY}90` }} onClick={() => setOpen(false)}><div role="dialog" aria-label="Change Password" className="w-full max-w-sm p-5 space-y-3" style={{ background: WARM, borderRadius: 4 }} onClick={e => e.stopPropagation()}><div className="flex justify-between"><h2 className="font-700" style={{ color: NAVY }}>{passwordIsSet ? 'Change' : 'Set'} Demo Password</h2><button aria-label="Close" onClick={() => setOpen(false)}><X size={18} /></button></div>{(passwordIsSet ? [[current, setCurrent, 'Current Password'], [next, setNext, 'New Password'], [confirm, setConfirm, 'Confirm New Password']] : [[next, setNext, 'New Password'], [confirm, setConfirm, 'Confirm New Password']]).map(([value, setter, label]) => <label key={label as string} className="block text-xs" style={{ color: NAVY }}>{label as string}<input type="password" value={value as string} onChange={e => (setter as (value: string) => void)(e.target.value)} className="w-full border px-3 py-2 mt-1" style={{ borderRadius: 3 }} /></label>)}{error && <p role="alert" className="text-xs" style={{ color: ORANGE }}>{error}</p>}<button onClick={save} className="w-full py-2 text-white" style={{ background: '#2A7B6F', borderRadius: 3 }}>Save Password</button><p className="text-xs" style={{ color: NAVY }}>Demo session only. This does not change your sign-in password.</p></div></div>}
       </div>
     </SkeletonPage>
   )
@@ -2254,7 +2254,7 @@ function PolkaAppInner() {
 
           {/* Profile & account pages */}
           {activeView === 'profile' && <ProfilePage profile={profile} onSave={p => { setProfile(p); setUserPhone(p.phone); push('Profile saved') }} />}
-          {activeView === 'account' && <AccountPage profile={profile} onPasswordChange={(current, next) => { if (current !== demoPassword || !demoPassword) return false; setDemoPassword(next); push('Password updated for this demo session'); return true }} />}
+          {activeView === 'account' && <AccountPage profile={profile} passwordIsSet={Boolean(demoPassword)} onPasswordChange={(current, next) => { if (demoPassword && current !== demoPassword) return false; setDemoPassword(next); push('Demo password updated for this session'); return true }} />}
           {activeView === 'settings' && <SettingsPage settings={settings} onChange={setSettings} oddsFormat={oddsMode} onOddsChange={m => { if (m !== oddsMode) toggleOdds() }} onAccount={() => goTo('account')} />}
           {activeView === 'notifications' && <SkeletonPage title="Notifications" icon="🔔"><div className="p-4 space-y-2">{alerts.length ? alerts.map(a => <div key={a.id} className="border p-3 text-sm" style={{ background: SKY, color: NAVY, borderColor: `${NAVY}15` }}><strong>{a.title}</strong><p>{a.body}</p></div>) : <p className="text-sm" style={{ color: NAVY }}>No alerts yet.</p>}</div></SkeletonPage>}
           {activeView === 'language' && <LanguagePage />}
