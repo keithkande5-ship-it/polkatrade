@@ -1829,6 +1829,7 @@ function PolkaAppInner() {
 
   // ── Combo actions
   const addToCombo = (market: Market, position: string, odds: number, customAmount?: number) => {
+    if (!isSignedIn) { setAuthPrompt('Sign in to add to your multi-slip'); return }
     const existing = comboPositions.find(p => p.marketId === market.id)
     if (existing) {
       setComboPositions(ps => ps.map(p => p.marketId === market.id ? { ...p, position, odds, customAmount, isNew: true } : p))
@@ -1853,6 +1854,7 @@ function PolkaAppInner() {
   const checkoutCombo = (addedAmount: number) => {
     if (comboPositions.length === 0) return
     const { totalStake } = comboMath(comboPositions.length, addedAmount, comboPositions)
+    if (totalStake > balance) { push('Insufficient balance — deposit to confirm this combo', 'warn'); setShowDeposit(true); return }
     const newEntry: WalletEntry = {
       id: `w${Date.now()}`,
       type: 'combo',
@@ -1882,6 +1884,7 @@ function PolkaAppInner() {
   }
 
   const confirmTrade = (market: Market, position: string, odds: number, amount: number) => {
+    if (amount > balance) { push('Insufficient balance — deposit to confirm this prediction', 'warn'); setShowDeposit(true); return }
     const entry: WalletEntry = {
       id: `w${Date.now()}`,
       type: 'bet',
@@ -1906,9 +1909,15 @@ function PolkaAppInner() {
     setPortfolio(ps => [trade, ...ps])
     bump(market.id, position === 'NO' ? -1 : 1, amount)
     push('Prediction recorded — added to portfolio')
+    window.history.replaceState(null, '', window.location.pathname)
     setSelectedMarket(null)
     setActiveView('portfolio')
   }
+
+  const requestTrade = (market: Market, position: string, odds: number, amount: number) => requireAuth('Sign in to place a prediction', () => {
+    if (settings.confirmTrade) setPendingTrade({ market, position, odds, amount })
+    else confirmTrade(market, position, odds, amount)
+  })
 
   const publishMarket = (market: Market, seed: number) => {
     if (balance < seed) {
@@ -1935,6 +1944,8 @@ function PolkaAppInner() {
   }
 
   const handleDeposit = (amount: number) => {
+    setWalletUnread(n => n + 1)
+    notify('Deposit confirmed', `${formatKES(amount)} received via M-PESA`)
     const entry: WalletEntry = {
       id: `w${Date.now()}`,
       type: 'deposit',
@@ -1949,6 +1960,8 @@ function PolkaAppInner() {
   }
 
   const handleWithdraw = (amount: number, phone: string) => {
+    setWalletUnread(n => n + 1)
+    notify('Withdrawal pending', `${formatKES(amount)} sent to M-PESA`)
     const digits = phone.replace(/\D/g, '')
     const maskedPhone = digits.length >= 4 ? `•••• ${digits.slice(-4)}` : 'M-PESA'
     const entry: WalletEntry = {
@@ -1967,6 +1980,7 @@ function PolkaAppInner() {
 
   // Page content for secondary views
   const isSecondaryView = !['markets', 'portfolio', 'leaderboard'].includes(activeView)
+  const badges = { portfolio: portfolio.filter(t => t.status === 'open').length, wallet: walletUnread, notifications: alerts.filter(a => !a.read).length }
 
   return (
     <div className="min-h-full flex flex-col" style={{ background: MINERAL, fontFamily: 'Geist, Inter, system-ui, sans-serif' }}>
@@ -1975,6 +1989,7 @@ function PolkaAppInner() {
 
       {/* ── Header ── */}
       <header className="sticky top-0 z-40 border-b" style={{ background: NAVY, borderColor: `${NAVY}22`, boxShadow: '0 2px 8px rgba(21,43,67,0.25)' }}>
+        <div aria-hidden="true" className={`absolute top-0 left-0 h-[2px] transition-all duration-300 motion-reduce:transition-none ${progress ? 'w-full opacity-100' : 'w-0 opacity-0'}`} style={{ background: '#2A7B6F' }} />
         <div className="flex items-center h-16 px-3 sm:px-4 gap-2">
           {/* Logo */}
           <button onClick={() => setActiveView('markets')} className="shrink-0 mr-2 sm:mr-4 hover:opacity-80 transition-opacity">
@@ -1996,6 +2011,7 @@ function PolkaAppInner() {
                 className={`px-3 py-1.5 text-sm font-600 uppercase tracking-wider whitespace-nowrap transition-colors ${activeView === key ? 'bg-white/10 text-white' : 'text-white/50 hover:text-white'}`}
               >
                 {label}
+                {key === 'portfolio' && isSignedIn && <CountBadge count={badges.portfolio} />}
               </button>
             ))}
             {/* Combo link — desktop */}
@@ -2032,13 +2048,13 @@ function PolkaAppInner() {
                 Deposit
               </button>
             ) : (
-              <button
+              <div className="flex items-center gap-1"><button
                 onClick={() => setShowSignIn(true)}
                 style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, boxShadow: BV_DK, background: ORANGE }}
                 className="px-4 py-1.5 text-sm font-700 uppercase tracking-wider text-white hover:brightness-110 transition-all"
               >
                 Sign In
-              </button>
+              </button><button onClick={() => setShowSignIn(true)} className="px-2 sm:px-3 py-1.5 text-sm font-700 uppercase text-white" style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, background: '#2A7B6F', boxShadow: BV_DK }}>Register</button></div>
             )}
             {/* Hamburger */}
             <button
@@ -2068,6 +2084,7 @@ function PolkaAppInner() {
             >
               <Icon size={17} />
               <span style={{ fontFamily: 'Barlow Condensed, sans-serif' }} className="text-[9px] font-600 uppercase tracking-wider mt-0.5">{label}</span>
+              {isSignedIn && (key === 'portfolio' || key === 'wallet') && <CountBadge count={badges[key]} />}
             </button>
           ))}
         </div>
@@ -2082,7 +2099,7 @@ function PolkaAppInner() {
               <span style={{ fontFamily: 'Barlow Condensed, sans-serif', color: ORANGE }} className="text-[11px] font-700 uppercase tracking-widest whitespace-nowrap">{liveCount} Live</span>
             </span>
             {markets.filter(m => m.isLive && !m.isResolved).map(m => (
-              <button key={m.id} onClick={() => setSelectedMarket(m)} className="shrink-0 flex items-center gap-1.5 text-[11px] hover:text-[#152B43] transition-colors whitespace-nowrap" style={{ color: `${NAVY}65` }}>
+              <button key={m.id} onClick={() => openMarket(m)} className="shrink-0 flex items-center gap-1.5 text-[11px] hover:text-[#152B43] transition-colors whitespace-nowrap" style={{ color: `${NAVY}65` }}>
                 <span className="max-w-[130px] truncate">{m.question}</span>
                 <span style={{ fontFamily: 'Geist Mono, monospace', color: NAVY, fontWeight: 600 }}>{m.yesOdds}%</span>
               </button>
@@ -2199,7 +2216,7 @@ function PolkaAppInner() {
                       key={m.id}
                       market={m}
                       index={i}
-                      onSelect={setSelectedMarket}
+                      onSelect={openMarket}
                       comboMode={comboMode}
                       comboPositions={comboPositions}
                       onAddToCombo={(market, position, odds) => addToCombo(market, position, odds)}
@@ -2217,7 +2234,7 @@ function PolkaAppInner() {
               trades={portfolio}
               balance={balance}
               isSignedIn={isSignedIn}
-              onNavigate={setActiveView}
+              onNavigate={goTo}
               onSignIn={() => setShowSignIn(true)}
               onOpenCombo={() => { setComboOpen(true); setComboMode(true) }}
             />
@@ -2230,7 +2247,7 @@ function PolkaAppInner() {
                 <div style={{ fontFamily: 'Barlow Condensed, sans-serif' }} className="text-xs uppercase tracking-widest text-white/40 font-600">Top Traders — September 2025</div>
               </div>
               {[
-                { rank: 1, name: 'Njeri K.', profit: 'KES 142,300', accuracy: '73%', markets: 84 },
+                { rank: 1, name: settings.leaderboardPublic ? 'Njeri K.' : 'Anonymous', profit: 'KES 142,300', accuracy: '73%', markets: 84 },
                 { rank: 2, name: 'Ochieng M.', profit: 'KES 98,100', accuracy: '69%', markets: 121 },
                 { rank: 3, name: 'Wanjiku A.', profit: 'KES 76,500', accuracy: '71%', markets: 56 },
                 { rank: 4, name: 'Kamau B.', profit: 'KES 55,200', accuracy: '65%', markets: 203 },
@@ -2263,10 +2280,10 @@ function PolkaAppInner() {
           )}
 
           {/* Profile & account pages */}
-          {activeView === 'profile' && <ProfilePage profile={MOCK_PROFILE} />}
-          {activeView === 'account' && <AccountPage profile={MOCK_PROFILE} />}
-          {activeView === 'settings' && <SettingsPage />}
-          {activeView === 'notifications' && <NotificationsPage />}
+          {activeView === 'profile' && <ProfilePage profile={profile} onSave={p => { setProfile(p); setUserPhone(p.phone); push('Profile saved') }} />}
+          {activeView === 'account' && <AccountPage profile={profile} onPasswordChange={(current, next) => { if (current !== demoPassword || !demoPassword) return false; setDemoPassword(next); push('Password updated for this demo session'); return true }} />}
+          {activeView === 'settings' && <SettingsPage settings={settings} onChange={setSettings} oddsFormat={oddsMode} onOddsChange={m => { if (m !== oddsMode) toggleOdds() }} onAccount={() => goTo('account')} />}
+          {activeView === 'notifications' && <SkeletonPage title="Notifications" icon="🔔"><div className="p-4 space-y-2">{alerts.length ? alerts.map(a => <div key={a.id} className="border p-3 text-sm" style={{ background: SKY, color: NAVY, borderColor: `${NAVY}15` }}><strong>{a.title}</strong><p>{a.body}</p></div>) : <p className="text-sm" style={{ color: NAVY }}>No alerts yet.</p>}</div></SkeletonPage>}
           {activeView === 'language' && <LanguagePage />}
         </main>
 
@@ -2368,17 +2385,19 @@ function PolkaAppInner() {
         onDeposit={() => requireAuth("Sign in to deposit funds", () => setShowDeposit(true))}
         onCreate={() => requireAuth("Sign in to create a market", () => setShowCreate(true))}
         activeView={activeView}
+        profile={profile}
+        badges={badges}
       />
 
       {/* ── Modals ── */}
       {selectedMarket && (
         <MarketDetail
           market={selectedMarket}
-          onClose={() => setSelectedMarket(null)}
+          onClose={closeMarket}
           comboPositions={comboPositions}
           onAddToCombo={(market, position, odds, amount) => addToCombo(market, position, odds, amount)}
-          onConfirm={(...a: Parameters<typeof confirmTrade>) => requireAuth("Sign in to place a prediction", () => confirmTrade(...a))}
-          myTrades={portfolio}
+          onConfirm={requestTrade}
+          myTrades={isSignedIn ? portfolio : []}
         />
       )}
       {showCreate && <CreateMarket balance={balance} onClose={() => setShowCreate(false)} onPublish={publishMarket} />}
@@ -2394,7 +2413,7 @@ function PolkaAppInner() {
         <AuthModal
           reason={authPrompt ?? undefined}
           onClose={() => { setShowSignIn(false); setAuthPrompt(null) }}
-          onSuccess={p => { setIsSignedIn(true); setUserPhone(p.phone); setShowSignIn(false); setAuthPrompt(null); push(`Welcome, ${p.name}`) }}
+          onSuccess={p => { setProfile(old => ({ ...old, name: p.name, email: p.email, phone: p.phone, joined: old.joined || new Date().toLocaleDateString('en-KE', { month: 'long', year: 'numeric' }), signedIn: true })); setIsSignedIn(true); setUserPhone(p.phone); setShowSignIn(false); setAuthPrompt(null); push(`Welcome, ${p.name}`) }}
         />
       )}
       {showDeposit && (
