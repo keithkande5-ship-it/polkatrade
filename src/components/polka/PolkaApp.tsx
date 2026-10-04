@@ -1,7 +1,7 @@
 import polkaLogo from '@/assets/polka-logo.png.asset.json'
 import { useState, useEffect, useRef } from 'react'
 import type { CategoryId, Market, ComboPosition, PortfolioTrade, WalletEntry, View, CustomCategory, Outcome, InfoTab, PolkaProfile, PolkaSettings } from './types'
-import { MARKETS, MOCK_PROFILE, INITIAL_PORTFOLIO, INITIAL_WALLET, TOP_MOVERS, RECENT_BETS } from './data'
+import { MARKETS, TOP_MOVERS, RECENT_BETS } from './data'
 import { formatVolume, formatKES, shouldHideStats, estimatePayout, comboMath, seedSplit } from './utils'
 import {
   OddsProvider, OddsToggle, OddsNumber, FlipNumber, LiveProvider, ToastProvider, useToasts, useOddsMode,
@@ -1575,34 +1575,6 @@ function SettingsPage({ settings, onChange, oddsFormat, onOddsChange, onAccount 
   )
 }
 
-function NotificationsPage() {
-  const NOTIFS = [
-    { icon: '⚡', title: 'Combo confirmed', body: 'Combo #1 — 3 positions · KES 103', time: '2h ago', read: false },
-    { icon: '✅', title: 'Market resolved — WIN', body: 'AFCON 2025 · Morocco · +KES 1,100', time: '15d ago', read: true },
-    { icon: '✅', title: 'Market resolved — WIN', body: 'Premier League · Arsenal · +KES 616', time: '20d ago', read: true },
-    { icon: '🔔', title: 'Market closing soon', body: 'GPT-5 before July 2025 · 3 days left', time: '1d ago', read: false },
-    { icon: '💼', title: 'Deposit confirmed', body: 'KES 5,000 received via M-PESA', time: '12d ago', read: true },
-  ]
-  return (
-    <SkeletonPage title="Notifications" icon="🔔">
-      <div className="divide-y" style={{ borderColor: `${NAVY}08` }}>
-        {NOTIFS.map((n, i) => (
-          <div key={i} className="flex items-start gap-3 px-4 py-3" style={{ background: n.read ? (i % 2 === 0 ? WARM : SKY) : `${SKY}`, borderLeft: n.read ? 'none' : `3px solid ${ORANGE}` }}>
-            <span className="text-xl shrink-0 mt-0.5">{n.icon}</span>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between gap-2">
-                <div className="text-xs font-600" style={{ color: NAVY }}>{n.title}</div>
-                <div className="text-[10px] shrink-0" style={{ color: `${NAVY}35` }}>{n.time}</div>
-              </div>
-              <div className="text-[11px] mt-0.5" style={{ color: `${NAVY}55` }}>{n.body}</div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </SkeletonPage>
-  )
-}
-
 function LanguagePage() {
   const LANGS = [
     { code: 'en', label: 'English', native: 'English', flag: '🇬🇧', active: true },
@@ -1980,7 +1952,6 @@ function PolkaAppInner() {
   }
 
   // Page content for secondary views
-  const isSecondaryView = !['markets', 'portfolio', 'leaderboard'].includes(activeView)
   const badges = { portfolio: portfolio.filter(t => t.status === 'open').length, wallet: walletUnread, notifications: alerts.filter(a => !a.read).length }
 
   return (
