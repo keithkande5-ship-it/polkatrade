@@ -1,10 +1,10 @@
 import polkaLogo from '@/assets/polka-logo.png.asset.json'
 import { useState, useEffect, useRef } from 'react'
-import type { CategoryId, Market, ComboPosition, PortfolioTrade, WalletEntry, View, CustomCategory, Outcome, InfoTab } from './types'
-import { MARKETS, MOCK_PROFILE, INITIAL_PORTFOLIO, INITIAL_WALLET, TOP_MOVERS, RECENT_BETS } from './data'
+import type { CategoryId, Market, ComboPosition, PortfolioTrade, WalletEntry, View, CustomCategory, Outcome, InfoTab, PolkaProfile, PolkaSettings } from './types'
+import { MARKETS, TOP_MOVERS, RECENT_BETS } from './data'
 import { formatVolume, formatKES, shouldHideStats, estimatePayout, comboMath, seedSplit } from './utils'
 import {
-  OddsProvider, OddsToggle, OddsNumber, FlipNumber, LiveProvider, ToastProvider, useToasts,
+  OddsProvider, OddsToggle, OddsNumber, FlipNumber, LiveProvider, ToastProvider, useToasts, useOddsMode,
   useLive, useLiveMarket, VolumeFCT, StatusPill, marketStatus, DisplayKeyframes,
   CatIcon, catIconFor, NavIcons,
 } from './display'
@@ -12,7 +12,7 @@ import { Tutorial } from './Tutorial'
 import { WithdrawModal } from './WithdrawModal'
 import { DepositModal } from './DepositModal'
 import { AuthModal } from './AuthModal'
-import { ShieldCheck, MessageCircle, Lock, Link2, HelpCircle } from 'lucide-react'
+import { ShieldCheck, MessageCircle, Lock, Link2, HelpCircle, Pencil, Check, X } from 'lucide-react'
 import { TradeDrawer } from './TradeBar'
 import { InfoModal } from './InfoModal'
 
@@ -27,6 +27,28 @@ const ORANGE  = '#E15B36'
 const SKY     = '#DCE7EF'
 const WARM    = '#FAF9F6'
 const MINERAL = '#F2F0EA'
+
+const DEFAULT_PROFILE: PolkaProfile = { name: '', email: '', phone: '', joined: '', verified: false, oddsFormat: 'percent', signedIn: false }
+const DEFAULT_SETTINGS: PolkaSettings = { confirmTrade: true, autoAddToMultiSlip: false, leaderboardPublic: true }
+const PAGE_TITLE = "Polka.trade — Kenya's Prediction Market"
+function readSaved<T>(key: string, fallback: T, valid: (value: unknown) => value is T): T {
+  try {
+    const value: unknown = JSON.parse(localStorage.getItem(key) ?? 'null')
+    return valid(value) ? value : fallback
+  } catch { return fallback }
+}
+function isRecord(value: unknown): value is Record<string, unknown> { return Boolean(value) && typeof value === 'object' && !Array.isArray(value) }
+const isProfile = (v: unknown): v is PolkaProfile => isRecord(v) && typeof v['name'] === 'string' && typeof v['email'] === 'string' && typeof v['phone'] === 'string' && typeof v['signedIn'] === 'boolean' && (v['oddsFormat'] === 'percent' || v['oddsFormat'] === 'multiplier')
+const isSettings = (v: unknown): v is PolkaSettings => isRecord(v) && typeof v['confirmTrade'] === 'boolean' && typeof v['autoAddToMultiSlip'] === 'boolean' && typeof v['leaderboardPublic'] === 'boolean'
+const isMarket = (v: unknown): v is Market => isRecord(v) && typeof v['id'] === 'number' && typeof v['question'] === 'string' && typeof v['yesOdds'] === 'number' && typeof v['noOdds'] === 'number' && typeof v['category'] === 'string'
+const isWalletEntry = (v: unknown): v is WalletEntry => isRecord(v) && typeof v['id'] === 'string' && typeof v['amount'] === 'number' && typeof v['description'] === 'string' && (v['status'] === 'completed' || v['status'] === 'pending')
+const isPortfolioTrade = (v: unknown): v is PortfolioTrade => isRecord(v) && typeof v['id'] === 'string' && typeof v['market'] === 'string' && typeof v['stake'] === 'number' && typeof v['status'] === 'string'
+const isArrayOf = <T,>(v: unknown, check: (item: unknown) => item is T): v is T[] => Array.isArray(v) && v.every(check)
+
+function CountBadge({ count }: { count: number }) {
+  if (!count) return null
+  return <span className="inline-flex min-w-4 h-4 px-1 items-center justify-center rounded-full text-[10px] font-700 text-white" style={{ background: ORANGE }} aria-label={`${count} new`}>{count}</span>
+}
 
 
 // ─── Category definitions ─────────────────────────────────────────────────────
@@ -288,9 +310,11 @@ type SideMenuProps = {
   onCreate: () => void
   onInfo: () => void
   activeView: View
+  profile: PolkaProfile
+  badges: { portfolio: number; wallet: number; notifications: number }
 }
 
-function SideMenu({ open, onClose, isSignedIn, balance, onNavigate, onSignIn, onSignOut, onDeposit, onCreate, onInfo, activeView }: SideMenuProps) {
+function SideMenu({ open, onClose, isSignedIn, balance, onNavigate, onSignIn, onSignOut, onDeposit, onCreate, onInfo, activeView, profile, badges }: SideMenuProps) {
   if (!open) return null
   const nav = (v: View, label: string, icon: string) => (
     <button
@@ -300,6 +324,7 @@ function SideMenu({ open, onClose, isSignedIn, balance, onNavigate, onSignIn, on
     >
       <span className="text-base w-5 text-center shrink-0">{icon}</span>
       <span className="font-500 flex-1" style={{ color: NAVY }}>{label}</span>
+      {isSignedIn && (v === 'portfolio' || v === 'wallet' || v === 'notifications') && <CountBadge count={badges[v]} />}
       {!isSignedIn && PRIVATE_VIEWS.includes(v) && <Lock size={13} style={{ color: `${NAVY}55` }} aria-label="Sign in required" />}
     </button>
   )
@@ -312,9 +337,9 @@ function SideMenu({ open, onClose, isSignedIn, balance, onNavigate, onSignIn, on
           <button onClick={onClose} className="absolute top-4 right-4 text-white/40 hover:text-white text-xl">×</button>
           {isSignedIn ? (
             <div>
-              <div className="w-12 h-12 rounded-full flex items-center justify-center text-lg font-700 text-white mb-2" style={{ background: ORANGE, boxShadow: BV_DK }}>N</div>
-              <div style={{ fontFamily: 'Barlow Condensed, sans-serif' }} className="text-white font-700 text-base">NJERI KAMAU</div>
-              <div className="text-white/40 text-xs">njeri.k@email.com</div>
+              <div className="w-12 h-12 rounded-full flex items-center justify-center text-lg font-700 text-white mb-2" style={{ background: ORANGE, boxShadow: BV_DK }}>{profile.name[0]?.toUpperCase()}</div>
+              <div style={{ fontFamily: 'Barlow Condensed, sans-serif' }} className="text-white font-700 text-base">{profile.name}</div>
+              <div className="text-white/40 text-xs">{profile.email}</div>
               <div className="mt-3 flex items-center gap-2">
                 <span style={{ fontFamily: 'Geist Mono, monospace' }} className="text-white font-600 text-sm">{formatKES(balance)}</span>
                 <button onClick={onDeposit} style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, background: '#F7D000', boxShadow: BV_DK, color: '#6B21A8' }} className="px-2.5 py-1 text-xs font-700 uppercase tracking-wider">+ Deposit</button>
@@ -380,12 +405,13 @@ type MarketRowProps = {
   index: number
   onSelect: (m: Market) => void
   comboMode: boolean
+  autoAdd?: boolean
   comboPositions: ComboPosition[]
   onAddToCombo: (m: Market, position: string, odds: number) => void
   customCategories: CustomCategory[]
 }
 
-function MarketRow({ market: baseMarket, index, onSelect, comboMode, comboPositions, onAddToCombo, customCategories }: MarketRowProps) {
+function MarketRow({ market: baseMarket, index, onSelect, comboMode, autoAdd, comboPositions, onAddToCombo, customCategories }: MarketRowProps) {
   const market = useLiveMarket(baseMarket)
   const bg = index % 2 === 0 ? WARM : SKY
   const isMulti = Boolean(market.outcomes?.length)
@@ -395,7 +421,7 @@ function MarketRow({ market: baseMarket, index, onSelect, comboMode, comboPositi
 
   const handlePositionClick = (e: React.MouseEvent, position: string, odds: number) => {
     e.stopPropagation()
-    if (comboMode) {
+    if (comboMode || autoAdd) {
       onAddToCombo(market, position, odds)
     } else {
       onSelect(market)
@@ -1473,111 +1499,77 @@ function SkeletonPage({ title, icon, children }: { title: string; icon: string; 
   )
 }
 
-function ProfilePage({ profile }: { profile: typeof MOCK_PROFILE }) {
+function ProfilePage({ profile, onSave }: { profile: PolkaProfile; onSave: (p: PolkaProfile) => void }) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(profile)
+  const [error, setError] = useState('')
+  const save = () => {
+    if (!draft.name.trim() || !/\S+@\S+\.\S+/.test(draft.email) || !/^254\d{9}$/.test(draft.phone.replace(/\D/g, ''))) { setError('Enter a name, valid email and Safaricom number (254XXXXXXXXX).'); return }
+    onSave({ ...profile, name: draft.name.trim(), email: draft.email.trim(), phone: draft.phone.replace(/\D/g, '') })
+    setError(''); setEditing(false)
+  }
   return (
     <SkeletonPage title="My Profile" icon="👤">
       <div className="p-4 space-y-4">
         <div className="flex items-center gap-4 p-4 border" style={{ background: SKY, borderColor: `${NAVY}15`, borderRadius: 3 }}>
-          <div className="w-14 h-14 rounded-full flex items-center justify-center text-2xl font-700 text-white shrink-0" style={{ background: ORANGE, boxShadow: BV_DK }}>{profile.name[0]}</div>
+          <div className="w-14 h-14 rounded-full flex items-center justify-center text-2xl font-700 text-white shrink-0" style={{ background: ORANGE, boxShadow: BV_DK }}>{profile.name[0]?.toUpperCase()}</div>
           <div>
             <div style={{ fontFamily: 'Barlow Condensed, sans-serif', color: NAVY }} className="text-base font-700 uppercase">{profile.name}</div>
             <div className="text-xs mt-0.5" style={{ color: `${NAVY}50` }}>Member since {profile.joined}</div>
             {profile.verified && <div className="text-[10px] font-600 mt-1" style={{ color: '#2A7B6F' }}>✓ KYC Verified</div>}
           </div>
         </div>
-        {[
-          { label: 'Phone', value: profile.phone },
-          { label: 'Email', value: profile.email },
-          { label: 'Account Status', value: 'Active — Verified' },
-        ].map(({ label, value }) => (
-          <div key={label} className="flex justify-between items-center px-3 py-3 border" style={{ background: WARM, borderColor: `${NAVY}10`, borderRadius: 3 }}>
-            <span className="text-xs" style={{ color: `${NAVY}50`, fontFamily: 'Barlow Condensed, sans-serif' }}>{label}</span>
-            <span className="text-xs font-500" style={{ color: NAVY, fontFamily: 'Geist Mono, monospace' }}>{value}</span>
-          </div>
-        ))}
-        <button style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, boxShadow: BV_UP, border: `1px solid ${NAVY}18`, color: `${NAVY}60` }} className="w-full py-2.5 text-sm font-600 uppercase tracking-wider bg-transparent hover:brightness-95 transition-all">Edit Profile</button>
+        {(['name', 'phone', 'email'] as const).map(field => <label key={field} className="block text-xs font-600 capitalize" style={{ color: NAVY }}>{field === 'name' ? 'Display Name' : field}
+          {editing ? <input aria-label={field === 'name' ? 'Display Name' : field} value={draft[field]} onChange={e => setDraft(d => ({ ...d, [field]: e.target.value }))} className="block w-full border px-3 py-2 mt-1" style={{ borderColor: `${NAVY}20`, background: WARM, borderRadius: 3 }} /> : <span className="block border px-3 py-3 mt-1 font-400" style={{ borderColor: `${NAVY}10`, background: WARM, borderRadius: 3 }}>{profile[field]}</span>}
+        </label>)}
+        {error && <p role="alert" className="text-xs" style={{ color: ORANGE }}>{error}</p>}
+        {editing ? <div className="flex gap-2"><button onClick={save} className="flex items-center gap-1 px-4 py-2 text-white" style={{ background: '#2A7B6F', borderRadius: 3 }}><Check size={15} /> Save Changes</button><button onClick={() => { setDraft(profile); setError(''); setEditing(false) }} className="flex items-center gap-1 px-4 py-2 border" style={{ borderRadius: 3 }}><X size={15} /> Cancel</button></div> : <button onClick={() => { setDraft(profile); setEditing(true) }} className="flex items-center gap-1 px-4 py-2 border" style={{ borderRadius: 3 }}><Pencil size={15} /> Edit Profile</button>}
       </div>
     </SkeletonPage>
   )
 }
 
-function AccountPage({ profile }: { profile: typeof MOCK_PROFILE }) {
+function AccountPage({ profile, passwordIsSet, onPasswordChange }: { profile: PolkaProfile; passwordIsSet: boolean; onPasswordChange: (current: string, next: string) => boolean }) {
+  const [open, setOpen] = useState(false)
+  const [current, setCurrent] = useState('')
+  const [next, setNext] = useState('')
+  const [confirm, setConfirm] = useState('')
+  const [error, setError] = useState('')
+  const save = () => {
+    if ((passwordIsSet && !current) || next.length < 8 || next !== confirm) { setError('Enter a matching new password of at least 8 characters' + (passwordIsSet ? ' and your current password.' : '.')); return }
+    if (!onPasswordChange(current, next)) { setError('Current password does not match.'); return }
+    setOpen(false); setCurrent(''); setNext(''); setConfirm(''); setError('')
+  }
   return (
     <SkeletonPage title="My Account" icon="⚙️">
       <div className="p-4 space-y-3">
         {[
           { label: 'Login Email', value: profile.email },
-          { label: 'Phone Number', value: profile.phone },
-          { label: 'Password', value: '••••••••••' },
-          { label: 'Two-Factor Auth', value: 'Enabled via M-PESA OTP' },
-          { label: 'KYC Status', value: 'Verified ✓' },
+          { label: 'Phone Number', value: profile.phone ? `•••• ${profile.phone.slice(-4)}` : 'Not set' },
+          { label: 'KYC Status', value: profile.verified ? 'Verified ✓' : 'Not verified' },
+          { label: 'Active Sessions', value: '1 active session' },
         ].map(({ label, value }) => (
           <div key={label} className="flex justify-between items-center px-3 py-3 border" style={{ background: WARM, borderColor: `${NAVY}10`, borderRadius: 3 }}>
             <span className="text-xs" style={{ color: `${NAVY}50`, fontFamily: 'Barlow Condensed, sans-serif' }}>{label}</span>
             <div className="flex items-center gap-2">
               <span className="text-xs font-500" style={{ color: NAVY, fontFamily: 'Geist Mono, monospace' }}>{value}</span>
-              <button className="text-[10px] px-2 py-0.5 border" style={{ color: `${NAVY}50`, borderColor: `${NAVY}20`, borderRadius: 2 }}>Edit</button>
             </div>
           </div>
         ))}
-        <div className="pt-2">
-          <button style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, boxShadow: BV_UP, border: `1px solid #8B1A1A33`, color: '#8B1A1A' }} className="w-full py-2.5 text-sm font-600 uppercase tracking-wider hover:brightness-95 transition-all">Close Account</button>
-        </div>
+        <button onClick={() => setOpen(true)} className="flex items-center gap-2 px-4 py-2 border text-sm" style={{ color: NAVY, borderRadius: 3 }}><Lock size={15} /> {passwordIsSet ? 'Change' : 'Set'} Demo Password</button>
+        {open && <div className="fixed inset-0 z-[85] flex items-center justify-center p-4" style={{ background: `${NAVY}90` }} onClick={() => setOpen(false)}><div role="dialog" aria-label="Change Password" className="w-full max-w-sm p-5 space-y-3" style={{ background: WARM, borderRadius: 4 }} onClick={e => e.stopPropagation()}><div className="flex justify-between"><h2 className="font-700" style={{ color: NAVY }}>{passwordIsSet ? 'Change' : 'Set'} Demo Password</h2><button aria-label="Close" onClick={() => setOpen(false)}><X size={18} /></button></div>{(passwordIsSet ? [[current, setCurrent, 'Current Password'], [next, setNext, 'New Password'], [confirm, setConfirm, 'Confirm New Password']] : [[next, setNext, 'New Password'], [confirm, setConfirm, 'Confirm New Password']]).map(([value, setter, label]) => <label key={label as string} className="block text-xs" style={{ color: NAVY }}>{label as string}<input type="password" value={value as string} onChange={e => (setter as (value: string) => void)(e.target.value)} className="w-full border px-3 py-2 mt-1" style={{ borderRadius: 3 }} /></label>)}{error && <p role="alert" className="text-xs" style={{ color: ORANGE }}>{error}</p>}<button onClick={save} className="w-full py-2 text-white" style={{ background: '#2A7B6F', borderRadius: 3 }}>Save Password</button><p className="text-xs" style={{ color: NAVY }}>Demo session only. This does not change your sign-in password.</p></div></div>}
       </div>
     </SkeletonPage>
   )
 }
 
-function SettingsPage() {
-  const SETTINGS = [
-    { group: 'Trading', items: ['Default stake amount', 'Confirm before trade', 'Combo auto-add on click'] },
-    { group: 'Privacy', items: ['Show on leaderboard', 'Public profile', 'Trading history visibility'] },
-    { group: 'Security', items: ['Change password', 'Two-factor authentication', 'Active sessions'] },
-  ]
+function SettingsPage({ settings, onChange, oddsFormat, onOddsChange, onAccount }: { settings: PolkaSettings; onChange: (s: PolkaSettings) => void; oddsFormat: PolkaProfile['oddsFormat']; onOddsChange: (mode: PolkaProfile['oddsFormat']) => void; onAccount: () => void }) {
   return (
     <SkeletonPage title="Settings" icon="⚙️">
       <div className="p-4 space-y-5">
-        {SETTINGS.map(({ group, items }) => (
-          <div key={group}>
-            <div style={{ fontFamily: 'Barlow Condensed, sans-serif', color: `${NAVY}40` }} className="text-[10px] uppercase tracking-widest font-600 mb-2">{group}</div>
-            {items.map((item, i) => (
-              <div key={i} className="flex items-center justify-between px-3 py-3 border-b" style={{ background: i % 2 === 0 ? WARM : SKY, borderColor: `${NAVY}08` }}>
-                <span className="text-xs" style={{ color: NAVY }}>{item}</span>
-                <div className="w-9 h-5 rounded-full flex items-center relative" style={{ background: `${NAVY}20`, cursor: 'pointer' }}>
-                  <div className="w-4 h-4 rounded-full absolute left-0.5" style={{ background: NAVY, boxShadow: BV_DK }} />
-                </div>
-              </div>
-            ))}
-          </div>
-        ))}
-      </div>
-    </SkeletonPage>
-  )
-}
-
-function NotificationsPage() {
-  const NOTIFS = [
-    { icon: '⚡', title: 'Combo confirmed', body: 'Combo #1 — 3 positions · KES 103', time: '2h ago', read: false },
-    { icon: '✅', title: 'Market resolved — WIN', body: 'AFCON 2025 · Morocco · +KES 1,100', time: '15d ago', read: true },
-    { icon: '✅', title: 'Market resolved — WIN', body: 'Premier League · Arsenal · +KES 616', time: '20d ago', read: true },
-    { icon: '🔔', title: 'Market closing soon', body: 'GPT-5 before July 2025 · 3 days left', time: '1d ago', read: false },
-    { icon: '💼', title: 'Deposit confirmed', body: 'KES 5,000 received via M-PESA', time: '12d ago', read: true },
-  ]
-  return (
-    <SkeletonPage title="Notifications" icon="🔔">
-      <div className="divide-y" style={{ borderColor: `${NAVY}08` }}>
-        {NOTIFS.map((n, i) => (
-          <div key={i} className="flex items-start gap-3 px-4 py-3" style={{ background: n.read ? (i % 2 === 0 ? WARM : SKY) : `${SKY}`, borderLeft: n.read ? 'none' : `3px solid ${ORANGE}` }}>
-            <span className="text-xl shrink-0 mt-0.5">{n.icon}</span>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between gap-2">
-                <div className="text-xs font-600" style={{ color: NAVY }}>{n.title}</div>
-                <div className="text-[10px] shrink-0" style={{ color: `${NAVY}35` }}>{n.time}</div>
-              </div>
-              <div className="text-[11px] mt-0.5" style={{ color: `${NAVY}55` }}>{n.body}</div>
-            </div>
-          </div>
-        ))}
+        <div className="flex items-center justify-between gap-3 border-b py-3 text-sm" style={{ color: NAVY }}><span>Default Odds Display</span><div className="flex border" style={{ borderRadius: 3 }}>{(['percent', 'multiplier'] as const).map(m => <button key={m} onClick={() => onOddsChange(m)} aria-pressed={oddsFormat === m} className="px-3 py-2 text-xs" style={{ background: oddsFormat === m ? NAVY : WARM, color: oddsFormat === m ? WARM : NAVY }}>{m === 'percent' ? '40%' : '2.50x'}</button>)}</div></div>
+        {([['confirmTrade', 'Trade Confirmation Prompt'], ['autoAddToMultiSlip', 'Auto-add to Multi-Slip'], ['leaderboardPublic', 'Leaderboard Privacy · Public']] as const).map(([key, label]) => <label key={key} className="flex items-center justify-between gap-3 border-b py-3 text-sm" style={{ color: NAVY }}><span>{label}</span><input type="checkbox" checked={settings[key]} onChange={e => onChange({ ...settings, [key]: e.target.checked })} className="w-5 h-5 accent-[#2A7B6F]" /></label>)}
+        <button onClick={onAccount} className="flex items-center gap-2 text-sm underline" style={{ color: NAVY }}>Security & password <span aria-hidden>→</span></button>
       </div>
     </SkeletonPage>
   )
@@ -1680,17 +1672,26 @@ function BrandSplash() {
 function PolkaAppInner() {
   const { push } = useToasts()
   const { bump } = useLive()
+  const { mode: oddsMode, toggle: toggleOdds } = useOddsMode()
   const [showTutorial, setShowTutorial] = useState(false)
   const [showWithdraw, setShowWithdraw] = useState(false)
   // Auth & balance
   const [isSignedIn, setIsSignedIn] = useState(false)
   const [userPhone, setUserPhone] = useState('')
+  const [profile, setProfile] = useState<PolkaProfile>(DEFAULT_PROFILE)
+  const [settings, setSettings] = useState<PolkaSettings>(DEFAULT_SETTINGS)
+  const [hydrated, setHydrated] = useState(false)
+  const [walletUnread, setWalletUnread] = useState(0)
+  const [alerts, setAlerts] = useState<{ id: string; title: string; body: string; read: boolean }[]>([])
+  const [progress, setProgress] = useState(false)
+  const [pendingTrade, setPendingTrade] = useState<{ market: Market; position: string; odds: number; amount: number } | null>(null)
+  const [demoPassword, setDemoPassword] = useState('')
   const [authPrompt, setAuthPrompt] = useState<string | null>(null)
   const requireAuth = (reason: string, fn: () => void) => {
     if (!isSignedIn) { setAuthPrompt(reason); return }
     fn()
   }
-  const [balance, setBalance] = useState(MOCK_PROFILE.balance)
+  const [balance, setBalance] = useState(0)
   const [markets, setMarkets] = useState<Market[]>(MARKETS)
   const [infoTab, setInfoTab] = useState<InfoTab | null>(null)
 
@@ -1716,21 +1717,49 @@ function PolkaAppInner() {
   const [newlyAdded, setNewlyAdded] = useState<number[]>([])
 
   // Portfolio & wallet
-  const [portfolio, setPortfolio] = useState<PortfolioTrade[]>(INITIAL_PORTFOLIO)
-  const [walletEntries, setWalletEntries] = useState<WalletEntry[]>(INITIAL_WALLET)
+  const [portfolio, setPortfolio] = useState<PortfolioTrade[]>([])
+  const [walletEntries, setWalletEntries] = useState<WalletEntry[]>([])
+
+  useEffect(() => {
+    const savedProfile = readSaved('polka_profile', DEFAULT_PROFILE, isProfile)
+    setProfile(savedProfile)
+    setIsSignedIn(savedProfile.signedIn)
+    setUserPhone(savedProfile.phone)
+    setSettings(readSaved('polka_settings', DEFAULT_SETTINGS, isSettings))
+    setBalance(savedProfile.signedIn ? readSaved('polka_balance', 0, (v): v is number => typeof v === 'number' && Number.isFinite(v) && v >= 0) : 0)
+    setPortfolio(savedProfile.signedIn ? readSaved('polka_portfolio_trades', [], (v): v is PortfolioTrade[] => isArrayOf(v, isPortfolioTrade)) : [])
+    setWalletEntries(savedProfile.signedIn ? readSaved('polka_wallet_entries', [], (v): v is WalletEntry[] => isArrayOf(v, isWalletEntry)) : [])
+    const created = readSaved('polka_created_markets', [], (v): v is Market[] => isArrayOf(v, isMarket))
+    setMarkets([...created, ...MARKETS.filter(m => !created.some(c => c.id === m.id))])
+    setHydrated(true)
+  }, [])
+  useEffect(() => { if (hydrated) localStorage.setItem('polka_profile', JSON.stringify({ ...profile, signedIn: isSignedIn, phone: userPhone, oddsFormat: oddsMode })) }, [profile, isSignedIn, userPhone, oddsMode, hydrated])
+  useEffect(() => { if (hydrated && isSignedIn) { localStorage.setItem('polka_balance', JSON.stringify(balance)); localStorage.setItem('polka_wallet_entries', JSON.stringify(walletEntries)); localStorage.setItem('polka_portfolio_trades', JSON.stringify(portfolio)) } }, [balance, walletEntries, portfolio, hydrated, isSignedIn])
+  useEffect(() => { if (hydrated) localStorage.setItem('polka_created_markets', JSON.stringify(markets.filter(m => !MARKETS.some(original => original.id === m.id)))) }, [markets, hydrated])
+  useEffect(() => { if (hydrated) localStorage.setItem('polka_settings', JSON.stringify(settings)) }, [settings, hydrated])
+  useEffect(() => { if (hydrated && oddsMode !== profile.oddsFormat) toggleOdds() }, [hydrated])
+  useEffect(() => {
+    document.title = selectedMarket ? `${selectedMarket.question} · Polka.trade` : PAGE_TITLE
+    return () => { document.title = PAGE_TITLE }
+  }, [selectedMarket])
+  useEffect(() => { if (!hydrated) return; setProgress(true); const timer = setTimeout(() => setProgress(false), 300); return () => clearTimeout(timer) }, [activeView, selectedMarket?.id, portfolio.length, hydrated])
+  const openMarket = (market: Market) => { setSelectedMarket(market); window.history.replaceState(null, '', `?market=${market.id}`) }
+  const closeMarket = () => { setSelectedMarket(null); window.history.replaceState(null, '', window.location.pathname) }
+  const notify = (title: string, body: string) => setAlerts(a => [{ id: crypto.randomUUID(), title, body, read: false }, ...a])
 
   const goTo = (v: View) => {
-    if (PRIVATE_VIEWS.includes(v)) requireAuth(`Sign in to open your ${v}`, () => setActiveView(v))
-    else setActiveView(v)
+    const navigate = () => { setActiveView(v); if (v === 'wallet') setWalletUnread(0); if (v === 'notifications') setAlerts(a => a.map(n => ({ ...n, read: true }))) }
+    if (PRIVATE_VIEWS.includes(v)) requireAuth(`Sign in to open your ${v}`, navigate)
+    else navigate()
   }
   useEffect(() => {
     if (!isSignedIn && PRIVATE_VIEWS.includes(activeView)) setActiveView('markets')
   }, [isSignedIn, activeView])
   useEffect(() => {
     const id = Number(new URLSearchParams(window.location.search).get('market'))
-    const m = MARKETS.find(x => x.id === id)
+    const m = markets.find(x => x.id === id)
     if (m) setSelectedMarket(m)
-  }, [])
+  }, [markets])
 
   // Custom categories
   const [customCategories, setCustomCategories] = useState<CustomCategory[]>([])
@@ -1773,6 +1802,7 @@ function PolkaAppInner() {
 
   // ── Combo actions
   const addToCombo = (market: Market, position: string, odds: number, customAmount?: number) => {
+    if (!isSignedIn) { setAuthPrompt('Sign in to add to your multi-slip'); return }
     const existing = comboPositions.find(p => p.marketId === market.id)
     if (existing) {
       setComboPositions(ps => ps.map(p => p.marketId === market.id ? { ...p, position, odds, customAmount, isNew: true } : p))
@@ -1797,6 +1827,7 @@ function PolkaAppInner() {
   const checkoutCombo = (addedAmount: number) => {
     if (comboPositions.length === 0) return
     const { totalStake } = comboMath(comboPositions.length, addedAmount, comboPositions)
+    if (totalStake > balance) { push('Insufficient balance — deposit to confirm this combo', 'warn'); setShowDeposit(true); return }
     const newEntry: WalletEntry = {
       id: `w${Date.now()}`,
       type: 'combo',
@@ -1826,6 +1857,7 @@ function PolkaAppInner() {
   }
 
   const confirmTrade = (market: Market, position: string, odds: number, amount: number) => {
+    if (amount > balance) { push('Insufficient balance — deposit to confirm this prediction', 'warn'); setShowDeposit(true); return }
     const entry: WalletEntry = {
       id: `w${Date.now()}`,
       type: 'bet',
@@ -1850,9 +1882,15 @@ function PolkaAppInner() {
     setPortfolio(ps => [trade, ...ps])
     bump(market.id, position === 'NO' ? -1 : 1, amount)
     push('Prediction recorded — added to portfolio')
+    window.history.replaceState(null, '', window.location.pathname)
     setSelectedMarket(null)
     setActiveView('portfolio')
   }
+
+  const requestTrade = (market: Market, position: string, odds: number, amount: number) => requireAuth('Sign in to place a prediction', () => {
+    if (settings.confirmTrade) setPendingTrade({ market, position, odds, amount })
+    else confirmTrade(market, position, odds, amount)
+  })
 
   const publishMarket = (market: Market, seed: number) => {
     if (balance < seed) {
@@ -1879,6 +1917,8 @@ function PolkaAppInner() {
   }
 
   const handleDeposit = (amount: number) => {
+    setWalletUnread(n => n + 1)
+    notify('Deposit confirmed', `${formatKES(amount)} received via M-PESA`)
     const entry: WalletEntry = {
       id: `w${Date.now()}`,
       type: 'deposit',
@@ -1893,6 +1933,8 @@ function PolkaAppInner() {
   }
 
   const handleWithdraw = (amount: number, phone: string) => {
+    setWalletUnread(n => n + 1)
+    notify('Withdrawal pending', `${formatKES(amount)} sent to M-PESA`)
     const digits = phone.replace(/\D/g, '')
     const maskedPhone = digits.length >= 4 ? `•••• ${digits.slice(-4)}` : 'M-PESA'
     const entry: WalletEntry = {
@@ -1910,7 +1952,7 @@ function PolkaAppInner() {
   }
 
   // Page content for secondary views
-  const isSecondaryView = !['markets', 'portfolio', 'leaderboard'].includes(activeView)
+  const badges = { portfolio: portfolio.filter(t => t.status === 'open').length, wallet: walletUnread, notifications: alerts.filter(a => !a.read).length }
 
   return (
     <div className="min-h-full flex flex-col" style={{ background: MINERAL, fontFamily: 'Geist, Inter, system-ui, sans-serif' }}>
@@ -1919,6 +1961,7 @@ function PolkaAppInner() {
 
       {/* ── Header ── */}
       <header className="sticky top-0 z-40 border-b" style={{ background: NAVY, borderColor: `${NAVY}22`, boxShadow: '0 2px 8px rgba(21,43,67,0.25)' }}>
+        <div aria-hidden="true" className={`absolute top-0 left-0 h-[2px] transition-all duration-300 motion-reduce:transition-none ${progress ? 'w-full opacity-100' : 'w-0 opacity-0'}`} style={{ background: '#2A7B6F' }} />
         <div className="flex items-center h-16 px-3 sm:px-4 gap-2">
           {/* Logo */}
           <button onClick={() => setActiveView('markets')} className="shrink-0 mr-2 sm:mr-4 hover:opacity-80 transition-opacity">
@@ -1940,6 +1983,7 @@ function PolkaAppInner() {
                 className={`px-3 py-1.5 text-sm font-600 uppercase tracking-wider whitespace-nowrap transition-colors ${activeView === key ? 'bg-white/10 text-white' : 'text-white/50 hover:text-white'}`}
               >
                 {label}
+                {key === 'portfolio' && isSignedIn && <CountBadge count={badges.portfolio} />}
               </button>
             ))}
             {/* Combo link — desktop */}
@@ -1976,13 +2020,13 @@ function PolkaAppInner() {
                 Deposit
               </button>
             ) : (
-              <button
+              <div className="flex items-center gap-1"><button
                 onClick={() => setShowSignIn(true)}
                 style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, boxShadow: BV_DK, background: ORANGE }}
                 className="px-4 py-1.5 text-sm font-700 uppercase tracking-wider text-white hover:brightness-110 transition-all"
               >
                 Sign In
-              </button>
+              </button><button onClick={() => setShowSignIn(true)} className="px-2 sm:px-3 py-1.5 text-sm font-700 uppercase text-white" style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, background: '#2A7B6F', boxShadow: BV_DK }}>Register</button></div>
             )}
             {/* Hamburger */}
             <button
@@ -2012,6 +2056,7 @@ function PolkaAppInner() {
             >
               <Icon size={17} />
               <span style={{ fontFamily: 'Barlow Condensed, sans-serif' }} className="text-[9px] font-600 uppercase tracking-wider mt-0.5">{label}</span>
+              {isSignedIn && (key === 'portfolio' || key === 'wallet') && <CountBadge count={badges[key]} />}
             </button>
           ))}
         </div>
@@ -2026,7 +2071,7 @@ function PolkaAppInner() {
               <span style={{ fontFamily: 'Barlow Condensed, sans-serif', color: ORANGE }} className="text-[11px] font-700 uppercase tracking-widest whitespace-nowrap">{liveCount} Live</span>
             </span>
             {markets.filter(m => m.isLive && !m.isResolved).map(m => (
-              <button key={m.id} onClick={() => setSelectedMarket(m)} className="shrink-0 flex items-center gap-1.5 text-[11px] hover:text-[#152B43] transition-colors whitespace-nowrap" style={{ color: `${NAVY}65` }}>
+              <button key={m.id} onClick={() => openMarket(m)} className="shrink-0 flex items-center gap-1.5 text-[11px] hover:text-[#152B43] transition-colors whitespace-nowrap" style={{ color: `${NAVY}65` }}>
                 <span className="max-w-[130px] truncate">{m.question}</span>
                 <span style={{ fontFamily: 'Geist Mono, monospace', color: NAVY, fontWeight: 600 }}>{m.yesOdds}%</span>
               </button>
@@ -2143,8 +2188,9 @@ function PolkaAppInner() {
                       key={m.id}
                       market={m}
                       index={i}
-                      onSelect={setSelectedMarket}
+                      onSelect={openMarket}
                       comboMode={comboMode}
+                      autoAdd={settings.autoAddToMultiSlip}
                       comboPositions={comboPositions}
                       onAddToCombo={(market, position, odds) => addToCombo(market, position, odds)}
                       customCategories={customCategories}
@@ -2161,7 +2207,7 @@ function PolkaAppInner() {
               trades={portfolio}
               balance={balance}
               isSignedIn={isSignedIn}
-              onNavigate={setActiveView}
+              onNavigate={goTo}
               onSignIn={() => setShowSignIn(true)}
               onOpenCombo={() => { setComboOpen(true); setComboMode(true) }}
             />
@@ -2174,7 +2220,7 @@ function PolkaAppInner() {
                 <div style={{ fontFamily: 'Barlow Condensed, sans-serif' }} className="text-xs uppercase tracking-widest text-white/40 font-600">Top Traders — September 2025</div>
               </div>
               {[
-                { rank: 1, name: 'Njeri K.', profit: 'KES 142,300', accuracy: '73%', markets: 84 },
+                { rank: 1, name: settings.leaderboardPublic ? 'Njeri K.' : 'Anonymous', profit: 'KES 142,300', accuracy: '73%', markets: 84 },
                 { rank: 2, name: 'Ochieng M.', profit: 'KES 98,100', accuracy: '69%', markets: 121 },
                 { rank: 3, name: 'Wanjiku A.', profit: 'KES 76,500', accuracy: '71%', markets: 56 },
                 { rank: 4, name: 'Kamau B.', profit: 'KES 55,200', accuracy: '65%', markets: 203 },
@@ -2207,10 +2253,10 @@ function PolkaAppInner() {
           )}
 
           {/* Profile & account pages */}
-          {activeView === 'profile' && <ProfilePage profile={MOCK_PROFILE} />}
-          {activeView === 'account' && <AccountPage profile={MOCK_PROFILE} />}
-          {activeView === 'settings' && <SettingsPage />}
-          {activeView === 'notifications' && <NotificationsPage />}
+          {activeView === 'profile' && <ProfilePage profile={profile} onSave={p => { setProfile(p); setUserPhone(p.phone); push('Profile saved') }} />}
+          {activeView === 'account' && <AccountPage profile={profile} passwordIsSet={Boolean(demoPassword)} onPasswordChange={(current, next) => { if (demoPassword && current !== demoPassword) return false; setDemoPassword(next); push('Demo password updated for this session'); return true }} />}
+          {activeView === 'settings' && <SettingsPage settings={settings} onChange={setSettings} oddsFormat={oddsMode} onOddsChange={m => { if (m !== oddsMode) toggleOdds() }} onAccount={() => goTo('account')} />}
+          {activeView === 'notifications' && <SkeletonPage title="Notifications" icon="🔔"><div className="p-4 space-y-2">{alerts.length ? alerts.map(a => <div key={a.id} className="border p-3 text-sm" style={{ background: SKY, color: NAVY, borderColor: `${NAVY}15` }}><strong>{a.title}</strong><p>{a.body}</p></div>) : <p className="text-sm" style={{ color: NAVY }}>No alerts yet.</p>}</div></SkeletonPage>}
           {activeView === 'language' && <LanguagePage />}
         </main>
 
@@ -2307,24 +2353,27 @@ function PolkaAppInner() {
         balance={balance}
         onNavigate={goTo}
         onSignIn={() => setShowSignIn(true)}
-        onSignOut={() => { setIsSignedIn(false); setActiveView('markets') }}
+        onSignOut={() => { setIsSignedIn(false); setBalance(0); setWalletEntries([]); setPortfolio([]); setWalletUnread(0); setAlerts([]); setActiveView('markets') }}
         onInfo={() => setInfoTab('how')}
         onDeposit={() => requireAuth("Sign in to deposit funds", () => setShowDeposit(true))}
         onCreate={() => requireAuth("Sign in to create a market", () => setShowCreate(true))}
         activeView={activeView}
+        profile={profile}
+        badges={badges}
       />
 
       {/* ── Modals ── */}
       {selectedMarket && (
         <MarketDetail
           market={selectedMarket}
-          onClose={() => setSelectedMarket(null)}
+          onClose={closeMarket}
           comboPositions={comboPositions}
           onAddToCombo={(market, position, odds, amount) => addToCombo(market, position, odds, amount)}
-          onConfirm={(...a: Parameters<typeof confirmTrade>) => requireAuth("Sign in to place a prediction", () => confirmTrade(...a))}
-          myTrades={portfolio}
+          onConfirm={requestTrade}
+          myTrades={isSignedIn ? portfolio : []}
         />
       )}
+      {pendingTrade && <div className="fixed inset-0 z-[85] flex items-center justify-center p-4" style={{ background: `${NAVY}90` }} onClick={() => setPendingTrade(null)}><div role="dialog" aria-label="Confirm Trade" className="w-full max-w-sm p-5 space-y-4" style={{ background: WARM, borderRadius: 4 }} onClick={e => e.stopPropagation()}><h2 className="text-lg font-700" style={{ color: NAVY }}>Confirm prediction</h2><p className="text-sm" style={{ color: NAVY }}>{pendingTrade.position} · {pendingTrade.market.question}</p><p className="text-sm" style={{ color: NAVY }}>Stake: {formatKES(pendingTrade.amount)}</p><div className="flex gap-2"><button onClick={() => setPendingTrade(null)} className="flex-1 border py-2" style={{ borderRadius: 3 }}>Cancel</button><button onClick={() => { const trade = pendingTrade; setPendingTrade(null); confirmTrade(trade.market, trade.position, trade.odds, trade.amount) }} className="flex-1 py-2 text-white" style={{ background: '#2A7B6F', borderRadius: 3 }}>Confirm Trade</button></div></div></div>}
       {showCreate && <CreateMarket balance={balance} onClose={() => setShowCreate(false)} onPublish={publishMarket} />}
       {infoTab && (
         <InfoModal
@@ -2338,7 +2387,7 @@ function PolkaAppInner() {
         <AuthModal
           reason={authPrompt ?? undefined}
           onClose={() => { setShowSignIn(false); setAuthPrompt(null) }}
-          onSuccess={p => { setIsSignedIn(true); setUserPhone(p.phone); setShowSignIn(false); setAuthPrompt(null); push(`Welcome, ${p.name}`) }}
+          onSuccess={p => { const returning = profile.email.toLowerCase() === p.email.toLowerCase(); setProfile(old => ({ ...old, name: returning ? old.name : p.name, email: p.email, phone: p.phone, joined: returning ? old.joined : new Date().toLocaleDateString('en-KE', { month: 'long', year: 'numeric' }), signedIn: true })); setBalance(returning ? readSaved('polka_balance', 0, (v): v is number => typeof v === 'number' && Number.isFinite(v) && v >= 0) : 0); setPortfolio(returning ? readSaved('polka_portfolio_trades', [], (v): v is PortfolioTrade[] => isArrayOf(v, isPortfolioTrade)) : []); setWalletEntries(returning ? readSaved('polka_wallet_entries', [], (v): v is WalletEntry[] => isArrayOf(v, isWalletEntry)) : []); setIsSignedIn(true); setUserPhone(p.phone); setShowSignIn(false); setAuthPrompt(null); push(`Welcome, ${p.name}`) }}
         />
       )}
       {showDeposit && (

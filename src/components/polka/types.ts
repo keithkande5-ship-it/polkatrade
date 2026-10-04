@@ -68,3 +68,19 @@ export type CustomCategory = {
 }
 
 export type InfoTab = 'how' | 'responsible' | 'terms' | 'support'
+
+export type PolkaProfile = {
+  name: string
+  email: string
+  phone: string
+  joined: string
+  verified: boolean
+  oddsFormat: 'percent' | 'multiplier'
+  signedIn: boolean
+}
+
+export type PolkaSettings = {
+  confirmTrade: boolean
+  autoAddToMultiSlip: boolean
+  leaderboardPublic: boolean
+}

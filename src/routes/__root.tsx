@@ -77,16 +77,17 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
-      { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { title: "Polka.trade — Kenya's Prediction Market" },
+      { name: "description", content: "Trade on real-world Kenyan politics, sports, finance, and culture. A peer-to-peer prediction market. 18+." },
+      { name: "author", content: "Polka.trade" },
+      { property: "og:title", content: "Polka.trade — Kenya's Prediction Market" },
+      { property: "og:description", content: "Trade on real-world Kenyan politics, sports, finance, and culture. A peer-to-peer prediction market. 18+." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:site", content: "@PolkaTradeKE" },
     ],
     links: [
+      { rel: "canonical", href: "https://polka.co.ke" },
       {
         rel: "stylesheet",
         href: appCss,
