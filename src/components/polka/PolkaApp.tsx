@@ -1,10 +1,10 @@
 import polkaLogo from '@/assets/polka-logo.png.asset.json'
 import { useState, useEffect, useRef } from 'react'
-import type { CategoryId, Market, ComboPosition, PortfolioTrade, WalletEntry, View, CustomCategory, Outcome, InfoTab } from './types'
+import type { CategoryId, Market, ComboPosition, PortfolioTrade, WalletEntry, View, CustomCategory, Outcome, InfoTab, PolkaProfile, PolkaSettings } from './types'
 import { MARKETS, MOCK_PROFILE, INITIAL_PORTFOLIO, INITIAL_WALLET, TOP_MOVERS, RECENT_BETS } from './data'
 import { formatVolume, formatKES, shouldHideStats, estimatePayout, comboMath, seedSplit } from './utils'
 import {
-  OddsProvider, OddsToggle, OddsNumber, FlipNumber, LiveProvider, ToastProvider, useToasts,
+  OddsProvider, OddsToggle, OddsNumber, FlipNumber, LiveProvider, ToastProvider, useToasts, useOddsMode,
   useLive, useLiveMarket, VolumeFCT, StatusPill, marketStatus, DisplayKeyframes,
   CatIcon, catIconFor, NavIcons,
 } from './display'
@@ -12,7 +12,7 @@ import { Tutorial } from './Tutorial'
 import { WithdrawModal } from './WithdrawModal'
 import { DepositModal } from './DepositModal'
 import { AuthModal } from './AuthModal'
-import { ShieldCheck, MessageCircle, Lock, Link2, HelpCircle } from 'lucide-react'
+import { ShieldCheck, MessageCircle, Lock, Link2, HelpCircle, Pencil, Check, X } from 'lucide-react'
 import { TradeDrawer } from './TradeBar'
 import { InfoModal } from './InfoModal'
 
@@ -27,6 +27,28 @@ const ORANGE  = '#E15B36'
 const SKY     = '#DCE7EF'
 const WARM    = '#FAF9F6'
 const MINERAL = '#F2F0EA'
+
+const DEFAULT_PROFILE: PolkaProfile = { name: '', email: '', phone: '', joined: '', verified: false, oddsFormat: 'percent', signedIn: false }
+const DEFAULT_SETTINGS: PolkaSettings = { confirmTrade: true, autoAddToMultiSlip: false, leaderboardPublic: true }
+const PAGE_TITLE = "Polka.trade — Kenya's Prediction Market"
+function readSaved<T>(key: string, fallback: T, valid: (value: unknown) => value is T): T {
+  try {
+    const value: unknown = JSON.parse(localStorage.getItem(key) ?? 'null')
+    return valid(value) ? value : fallback
+  } catch { return fallback }
+}
+function isRecord(value: unknown): value is Record<string, unknown> { return Boolean(value) && typeof value === 'object' && !Array.isArray(value) }
+const isProfile = (v: unknown): v is PolkaProfile => isRecord(v) && typeof v.name === 'string' && typeof v.email === 'string' && typeof v.phone === 'string' && typeof v.signedIn === 'boolean' && (v.oddsFormat === 'percent' || v.oddsFormat === 'multiplier')
+const isSettings = (v: unknown): v is PolkaSettings => isRecord(v) && typeof v.confirmTrade === 'boolean' && typeof v.autoAddToMultiSlip === 'boolean' && typeof v.leaderboardPublic === 'boolean'
+const isMarket = (v: unknown): v is Market => isRecord(v) && typeof v.id === 'number' && typeof v.question === 'string' && typeof v.yesOdds === 'number' && typeof v.noOdds === 'number' && typeof v.category === 'string'
+const isWalletEntry = (v: unknown): v is WalletEntry => isRecord(v) && typeof v.id === 'string' && typeof v.amount === 'number' && typeof v.description === 'string' && (v.status === 'completed' || v.status === 'pending')
+const isPortfolioTrade = (v: unknown): v is PortfolioTrade => isRecord(v) && typeof v.id === 'string' && typeof v.market === 'string' && typeof v.stake === 'number' && typeof v.status === 'string'
+const isArrayOf = <T,>(v: unknown, check: (item: unknown) => item is T): v is T[] => Array.isArray(v) && v.every(check)
+
+function CountBadge({ count }: { count: number }) {
+  if (!count) return null
+  return <span className="inline-flex min-w-4 h-4 px-1 items-center justify-center rounded-full text-[10px] font-700 text-white" style={{ background: ORANGE }} aria-label={`${count} new`}>{count}</span>
+}
 
 
 // ─── Category definitions ─────────────────────────────────────────────────────
