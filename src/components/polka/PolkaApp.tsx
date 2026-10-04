@@ -1498,83 +1498,77 @@ function SkeletonPage({ title, icon, children }: { title: string; icon: string; 
   )
 }
 
-function ProfilePage({ profile }: { profile: typeof MOCK_PROFILE }) {
+function ProfilePage({ profile, onSave }: { profile: PolkaProfile; onSave: (p: PolkaProfile) => void }) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(profile)
+  const [error, setError] = useState('')
+  const save = () => {
+    if (!draft.name.trim() || !/\S+@\S+\.\S+/.test(draft.email) || !/^254\d{9}$/.test(draft.phone.replace(/\D/g, ''))) { setError('Enter a name, valid email and Safaricom number (254XXXXXXXXX).'); return }
+    onSave({ ...profile, name: draft.name.trim(), email: draft.email.trim(), phone: draft.phone.replace(/\D/g, '') })
+    setError(''); setEditing(false)
+  }
   return (
     <SkeletonPage title="My Profile" icon="👤">
       <div className="p-4 space-y-4">
         <div className="flex items-center gap-4 p-4 border" style={{ background: SKY, borderColor: `${NAVY}15`, borderRadius: 3 }}>
-          <div className="w-14 h-14 rounded-full flex items-center justify-center text-2xl font-700 text-white shrink-0" style={{ background: ORANGE, boxShadow: BV_DK }}>{profile.name[0]}</div>
+          <div className="w-14 h-14 rounded-full flex items-center justify-center text-2xl font-700 text-white shrink-0" style={{ background: ORANGE, boxShadow: BV_DK }}>{profile.name[0]?.toUpperCase()}</div>
           <div>
             <div style={{ fontFamily: 'Barlow Condensed, sans-serif', color: NAVY }} className="text-base font-700 uppercase">{profile.name}</div>
             <div className="text-xs mt-0.5" style={{ color: `${NAVY}50` }}>Member since {profile.joined}</div>
             {profile.verified && <div className="text-[10px] font-600 mt-1" style={{ color: '#2A7B6F' }}>✓ KYC Verified</div>}
           </div>
         </div>
-        {[
-          { label: 'Phone', value: profile.phone },
-          { label: 'Email', value: profile.email },
-          { label: 'Account Status', value: 'Active — Verified' },
-        ].map(({ label, value }) => (
-          <div key={label} className="flex justify-between items-center px-3 py-3 border" style={{ background: WARM, borderColor: `${NAVY}10`, borderRadius: 3 }}>
-            <span className="text-xs" style={{ color: `${NAVY}50`, fontFamily: 'Barlow Condensed, sans-serif' }}>{label}</span>
-            <span className="text-xs font-500" style={{ color: NAVY, fontFamily: 'Geist Mono, monospace' }}>{value}</span>
-          </div>
-        ))}
-        <button style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, boxShadow: BV_UP, border: `1px solid ${NAVY}18`, color: `${NAVY}60` }} className="w-full py-2.5 text-sm font-600 uppercase tracking-wider bg-transparent hover:brightness-95 transition-all">Edit Profile</button>
+        {(['name', 'phone', 'email'] as const).map(field => <label key={field} className="block text-xs font-600 capitalize" style={{ color: NAVY }}>{field === 'name' ? 'Display Name' : field}
+          {editing ? <input aria-label={field === 'name' ? 'Display Name' : field} value={draft[field]} onChange={e => setDraft(d => ({ ...d, [field]: e.target.value }))} className="block w-full border px-3 py-2 mt-1" style={{ borderColor: `${NAVY}20`, background: WARM, borderRadius: 3 }} /> : <span className="block border px-3 py-3 mt-1 font-400" style={{ borderColor: `${NAVY}10`, background: WARM, borderRadius: 3 }}>{profile[field]}</span>}
+        </label>)}
+        {error && <p role="alert" className="text-xs" style={{ color: ORANGE }}>{error}</p>}
+        {editing ? <div className="flex gap-2"><button onClick={save} className="flex items-center gap-1 px-4 py-2 text-white" style={{ background: '#2A7B6F', borderRadius: 3 }}><Check size={15} /> Save Changes</button><button onClick={() => { setDraft(profile); setError(''); setEditing(false) }} className="flex items-center gap-1 px-4 py-2 border" style={{ borderRadius: 3 }}><X size={15} /> Cancel</button></div> : <button onClick={() => { setDraft(profile); setEditing(true) }} className="flex items-center gap-1 px-4 py-2 border" style={{ borderRadius: 3 }}><Pencil size={15} /> Edit Profile</button>}
       </div>
     </SkeletonPage>
   )
 }
 
-function AccountPage({ profile }: { profile: typeof MOCK_PROFILE }) {
+function AccountPage({ profile, onPasswordChange }: { profile: PolkaProfile; onPasswordChange: (current: string, next: string) => boolean }) {
+  const [open, setOpen] = useState(false)
+  const [current, setCurrent] = useState('')
+  const [next, setNext] = useState('')
+  const [confirm, setConfirm] = useState('')
+  const [error, setError] = useState('')
+  const save = () => {
+    if (!current || next.length < 8 || next !== confirm) { setError('Enter your current password and a matching new password of at least 8 characters.'); return }
+    if (!onPasswordChange(current, next)) { setError('Current password does not match.'); return }
+    setOpen(false); setCurrent(''); setNext(''); setConfirm(''); setError('')
+  }
   return (
     <SkeletonPage title="My Account" icon="⚙️">
       <div className="p-4 space-y-3">
         {[
           { label: 'Login Email', value: profile.email },
-          { label: 'Phone Number', value: profile.phone },
-          { label: 'Password', value: '••••••••••' },
-          { label: 'Two-Factor Auth', value: 'Enabled via M-PESA OTP' },
-          { label: 'KYC Status', value: 'Verified ✓' },
+          { label: 'Phone Number', value: profile.phone ? `•••• ${profile.phone.slice(-4)}` : 'Not set' },
+          { label: 'KYC Status', value: profile.verified ? 'Verified ✓' : 'Not verified' },
+          { label: 'Active Sessions', value: '1 active session' },
         ].map(({ label, value }) => (
           <div key={label} className="flex justify-between items-center px-3 py-3 border" style={{ background: WARM, borderColor: `${NAVY}10`, borderRadius: 3 }}>
             <span className="text-xs" style={{ color: `${NAVY}50`, fontFamily: 'Barlow Condensed, sans-serif' }}>{label}</span>
             <div className="flex items-center gap-2">
               <span className="text-xs font-500" style={{ color: NAVY, fontFamily: 'Geist Mono, monospace' }}>{value}</span>
-              <button className="text-[10px] px-2 py-0.5 border" style={{ color: `${NAVY}50`, borderColor: `${NAVY}20`, borderRadius: 2 }}>Edit</button>
             </div>
           </div>
         ))}
-        <div className="pt-2">
-          <button style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, boxShadow: BV_UP, border: `1px solid #8B1A1A33`, color: '#8B1A1A' }} className="w-full py-2.5 text-sm font-600 uppercase tracking-wider hover:brightness-95 transition-all">Close Account</button>
-        </div>
+        <button onClick={() => setOpen(true)} className="flex items-center gap-2 px-4 py-2 border text-sm" style={{ color: NAVY, borderRadius: 3 }}><Lock size={15} /> Change Password</button>
+        {open && <div className="fixed inset-0 z-[85] flex items-center justify-center p-4" style={{ background: `${NAVY}90` }} onClick={() => setOpen(false)}><div role="dialog" aria-label="Change Password" className="w-full max-w-sm p-5 space-y-3" style={{ background: WARM, borderRadius: 4 }} onClick={e => e.stopPropagation()}><div className="flex justify-between"><h2 className="font-700" style={{ color: NAVY }}>Change Password</h2><button aria-label="Close" onClick={() => setOpen(false)}><X size={18} /></button></div>{[[current, setCurrent, 'Current Password'], [next, setNext, 'New Password'], [confirm, setConfirm, 'Confirm New Password']].map(([value, setter, label]) => <label key={label as string} className="block text-xs" style={{ color: NAVY }}>{label as string}<input type="password" value={value as string} onChange={e => (setter as (value: string) => void)(e.target.value)} className="w-full border px-3 py-2 mt-1" style={{ borderRadius: 3 }} /></label>)}{error && <p role="alert" className="text-xs" style={{ color: ORANGE }}>{error}</p>}<button onClick={save} className="w-full py-2 text-white" style={{ background: '#2A7B6F', borderRadius: 3 }}>Save Password</button></div></div>}
       </div>
     </SkeletonPage>
   )
 }
 
-function SettingsPage() {
-  const SETTINGS = [
-    { group: 'Trading', items: ['Default stake amount', 'Confirm before trade', 'Combo auto-add on click'] },
-    { group: 'Privacy', items: ['Show on leaderboard', 'Public profile', 'Trading history visibility'] },
-    { group: 'Security', items: ['Change password', 'Two-factor authentication', 'Active sessions'] },
-  ]
+function SettingsPage({ settings, onChange, oddsFormat, onOddsChange, onAccount }: { settings: PolkaSettings; onChange: (s: PolkaSettings) => void; oddsFormat: PolkaProfile['oddsFormat']; onOddsChange: (mode: PolkaProfile['oddsFormat']) => void; onAccount: () => void }) {
   return (
     <SkeletonPage title="Settings" icon="⚙️">
       <div className="p-4 space-y-5">
-        {SETTINGS.map(({ group, items }) => (
-          <div key={group}>
-            <div style={{ fontFamily: 'Barlow Condensed, sans-serif', color: `${NAVY}40` }} className="text-[10px] uppercase tracking-widest font-600 mb-2">{group}</div>
-            {items.map((item, i) => (
-              <div key={i} className="flex items-center justify-between px-3 py-3 border-b" style={{ background: i % 2 === 0 ? WARM : SKY, borderColor: `${NAVY}08` }}>
-                <span className="text-xs" style={{ color: NAVY }}>{item}</span>
-                <div className="w-9 h-5 rounded-full flex items-center relative" style={{ background: `${NAVY}20`, cursor: 'pointer' }}>
-                  <div className="w-4 h-4 rounded-full absolute left-0.5" style={{ background: NAVY, boxShadow: BV_DK }} />
-                </div>
-              </div>
-            ))}
-          </div>
-        ))}
+        <div className="flex items-center justify-between gap-3 border-b py-3 text-sm" style={{ color: NAVY }}><span>Default Odds Display</span><div className="flex border" style={{ borderRadius: 3 }}>{(['percent', 'multiplier'] as const).map(m => <button key={m} onClick={() => onOddsChange(m)} aria-pressed={oddsFormat === m} className="px-3 py-2 text-xs" style={{ background: oddsFormat === m ? NAVY : WARM, color: oddsFormat === m ? WARM : NAVY }}>{m === 'percent' ? '40%' : '2.50x'}</button>)}</div></div>
+        {([['confirmTrade', 'Trade Confirmation Prompt'], ['autoAddToMultiSlip', 'Auto-add to Multi-Slip'], ['leaderboardPublic', 'Leaderboard Privacy · Public']] as const).map(([key, label]) => <label key={key} className="flex items-center justify-between gap-3 border-b py-3 text-sm" style={{ color: NAVY }}><span>{label}</span><input type="checkbox" checked={settings[key]} onChange={e => onChange({ ...settings, [key]: e.target.checked })} className="w-5 h-5 accent-[#2A7B6F]" /></label>)}
+        <button onClick={onAccount} className="flex items-center gap-2 text-sm underline" style={{ color: NAVY }}>Security & password <span aria-hidden>→</span></button>
       </div>
     </SkeletonPage>
   )
