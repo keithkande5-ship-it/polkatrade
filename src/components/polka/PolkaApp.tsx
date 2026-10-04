@@ -405,12 +405,13 @@ type MarketRowProps = {
   index: number
   onSelect: (m: Market) => void
   comboMode: boolean
+  autoAdd?: boolean
   comboPositions: ComboPosition[]
   onAddToCombo: (m: Market, position: string, odds: number) => void
   customCategories: CustomCategory[]
 }
 
-function MarketRow({ market: baseMarket, index, onSelect, comboMode, comboPositions, onAddToCombo, customCategories }: MarketRowProps) {
+function MarketRow({ market: baseMarket, index, onSelect, comboMode, autoAdd, comboPositions, onAddToCombo, customCategories }: MarketRowProps) {
   const market = useLiveMarket(baseMarket)
   const bg = index % 2 === 0 ? WARM : SKY
   const isMulti = Boolean(market.outcomes?.length)
@@ -420,7 +421,7 @@ function MarketRow({ market: baseMarket, index, onSelect, comboMode, comboPositi
 
   const handlePositionClick = (e: React.MouseEvent, position: string, odds: number) => {
     e.stopPropagation()
-    if (comboMode) {
+    if (comboMode || autoAdd) {
       onAddToCombo(market, position, odds)
     } else {
       onSelect(market)
@@ -2218,6 +2219,7 @@ function PolkaAppInner() {
                       index={i}
                       onSelect={openMarket}
                       comboMode={comboMode}
+                      autoAdd={settings.autoAddToMultiSlip}
                       comboPositions={comboPositions}
                       onAddToCombo={(market, position, odds) => addToCombo(market, position, odds)}
                       customCategories={customCategories}
