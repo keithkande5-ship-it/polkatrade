@@ -640,6 +640,15 @@ function MarketDetail({ market: baseMarket, onClose, comboPositions, onAddToComb
       <div className="flex-1 overflow-y-auto">
         <div className="mx-auto w-full max-w-6xl p-3 sm:p-4 pb-24 lg:pb-4 flex flex-col lg:grid lg:grid-cols-[minmax(0,1fr)_360px] gap-3 sm:gap-4 items-start">
 
+          <div className="order-1 lg:hidden w-full border p-4" style={{ background: WARM, borderRadius: 4, borderColor: `${NAVY}15` }}>
+            <div className="flex items-center gap-2 flex-wrap">
+              <StatusPill market={market} />
+              {isResolved ? <ResolvedBadge winner={market.winner!} /> : market.isLive ? <LiveDot /> : null}
+              <span className="text-[11px]" style={{ color: `${NAVY}45` }}>Resolves {market.endsAt}</span>
+            </div>
+            <h1 className="text-lg font-600 mt-2 leading-snug" style={{ color: NAVY }}>{market.question}</h1>
+          </div>
+
           {/* ── Trade panel (first on mobile, right column on desktop) ── */}
           <div className="order-2 lg:order-2 w-full lg:sticky lg:top-4">
             {!isResolved ? (
@@ -766,14 +775,14 @@ function MarketDetail({ market: baseMarket, onClose, comboPositions, onAddToComb
           </div>
 
           {/* ── Market body ── */}
-          <div className="order-1 lg:order-1 w-full space-y-3">
+          <div className="order-3 lg:order-1 w-full space-y-3">
             <div className="border p-4" style={{ background: WARM, borderRadius: 4, borderColor: `${NAVY}15` }}>
-              <div className="flex items-center gap-2 flex-wrap">
+              <div className="hidden lg:flex items-center gap-2 flex-wrap">
                 <StatusPill market={market} />
                 {isResolved ? <ResolvedBadge winner={market.winner!} /> : market.isLive ? <LiveDot /> : null}
                 <span className="text-[11px]" style={{ color: `${NAVY}45` }}>Resolves {market.endsAt}</span>
               </div>
-              <h1 className="text-base sm:text-xl font-600 mt-2 leading-snug" style={{ color: NAVY }}>{market.question}</h1>
+              <h1 className="hidden lg:block text-base sm:text-xl font-600 mt-2 leading-snug" style={{ color: NAVY }}>{market.question}</h1>
               <div className="flex gap-2 mt-2">
                 <button onClick={shareWhatsApp} style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, background: '#1F8A4C', boxShadow: BV_DK }} className="px-3 py-1.5 text-xs font-700 uppercase tracking-wider text-white hover:brightness-110 flex items-center gap-1.5">
                   <MessageCircle size={13} /> Share to WhatsApp
@@ -1513,6 +1522,15 @@ function ProfilePage({ profile, onSave }: { profile: PolkaProfile; onSave: (p: P
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(profile)
   const [error, setError] = useState('')
+  const fileInput = useRef<HTMLInputElement>(null)
+  const chooseAvatar = (file?: File) => {
+    if (!file) return
+    if (!file.type.startsWith('image/')) { setError('Choose an image file.'); return }
+    const reader = new FileReader()
+    reader.onload = () => { if (typeof reader.result === 'string') { onSave({ ...profile, avatar: reader.result }); setDraft(d => ({ ...d, avatar: reader.result })); setError('') } }
+    reader.onerror = () => setError('That photo could not be read.')
+    reader.readAsDataURL(file)
+  }
   const save = () => {
     if (!draft.name.trim() || !/\S+@\S+\.\S+/.test(draft.email) || !/^254\d{9}$/.test(draft.phone.replace(/\D/g, ''))) { setError('Enter a name, valid email and Safaricom number (254XXXXXXXXX).'); return }
     onSave({ ...profile, name: draft.name.trim(), email: draft.email.trim(), phone: draft.phone.replace(/\D/g, '') })
@@ -1521,12 +1539,17 @@ function ProfilePage({ profile, onSave }: { profile: PolkaProfile; onSave: (p: P
   return (
     <SkeletonPage title="My Profile" icon="👤">
       <div className="p-4 space-y-4">
-        <div className="flex items-center gap-4 p-4 border" style={{ background: SKY, borderColor: `${NAVY}15`, borderRadius: 3 }}>
-          <div className="w-14 h-14 rounded-full flex items-center justify-center text-2xl font-700 text-white shrink-0" style={{ background: ORANGE, boxShadow: BV_DK }}>{profile.name[0]?.toUpperCase()}</div>
+        <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-4 p-4 border" style={{ background: SKY, borderColor: `${NAVY}15`, borderRadius: 3 }}>
+          <div className="relative">
+            <ProfileAvatar profile={profile} size="lg" />
+            <button aria-label="Upload profile photo" title="Upload profile photo" onClick={() => fileInput.current?.click()} className="absolute -right-1 -bottom-1 w-8 h-8 rounded-full flex items-center justify-center text-white" style={{ background: '#2A7B6F', boxShadow: BV_DK }}><Camera size={14} /></button>
+            <input ref={fileInput} type="file" accept="image/*" className="hidden" onChange={e => chooseAvatar(e.target.files?.[0])} />
+          </div>
           <div>
             <div style={{ fontFamily: 'Barlow Condensed, sans-serif', color: NAVY }} className="text-base font-700 uppercase">{profile.name}</div>
             <div className="text-xs mt-0.5" style={{ color: `${NAVY}50` }}>Member since {profile.joined}</div>
             {profile.verified && <div className="text-[10px] font-600 mt-1" style={{ color: '#2A7B6F' }}>✓ KYC Verified</div>}
+            {profile.avatar && <button onClick={() => { onSave({ ...profile, avatar: '' }); setDraft(d => ({ ...d, avatar: '' })) }} className="mt-2 inline-flex items-center gap-1 text-[11px] font-500" style={{ color: ORANGE }}><Trash2 size={12} /> Remove Photo</button>}
           </div>
         </div>
         {(['name', 'phone', 'email'] as const).map(field => <label key={field} className="block text-xs font-600 capitalize" style={{ color: NAVY }}>{field === 'name' ? 'Display Name' : field}
@@ -1578,7 +1601,8 @@ function SettingsPage({ settings, onChange, oddsFormat, onOddsChange, onAccount 
     <SkeletonPage title="Settings" icon="⚙️">
       <div className="p-4 space-y-5">
         <div className="flex items-center justify-between gap-3 border-b py-3 text-sm" style={{ color: NAVY }}><span>Default Odds Display</span><div className="flex border" style={{ borderRadius: 3 }}>{(['percent', 'multiplier'] as const).map(m => <button key={m} onClick={() => onOddsChange(m)} aria-pressed={oddsFormat === m} className="px-3 py-2 text-xs" style={{ background: oddsFormat === m ? NAVY : WARM, color: oddsFormat === m ? WARM : NAVY }}>{m === 'percent' ? '40%' : '2.50x'}</button>)}</div></div>
-        {([['confirmTrade', 'Trade Confirmation Prompt'], ['autoAddToMultiSlip', 'Auto-add to Multi-Slip'], ['leaderboardPublic', 'Leaderboard Privacy · Public']] as const).map(([key, label]) => <label key={key} className="flex items-center justify-between gap-3 border-b py-3 text-sm" style={{ color: NAVY }}><span>{label}</span><input type="checkbox" checked={settings[key]} onChange={e => onChange({ ...settings, [key]: e.target.checked })} className="w-5 h-5 accent-[#2A7B6F]" /></label>)}
+        {([['confirmTrade', 'Trade Confirmation Prompt'], ['autoAddToMultiSlip', 'Auto-add to Multi-Slip']] as const).map(([key, label]) => <label key={key} className="flex items-center justify-between gap-3 border-b py-3 text-sm" style={{ color: NAVY }}><span>{label}</span><input type="checkbox" checked={settings[key]} onChange={e => onChange({ ...settings, [key]: e.target.checked })} className="w-5 h-5 accent-[#2A7B6F]" /></label>)}
+        <label className="flex items-center justify-between gap-3 border-b py-3 text-sm" style={{ color: NAVY }}><span>Leaderboard Privacy</span><input type="checkbox" checked={!settings.leaderboardPublic} onChange={e => onChange({ ...settings, leaderboardPublic: !e.target.checked })} className="w-5 h-5 accent-[#2A7B6F]" /></label>
         <button onClick={onAccount} className="flex items-center gap-2 text-sm underline" style={{ color: NAVY }}>Security & password <span aria-hidden>→</span></button>
       </div>
     </SkeletonPage>
