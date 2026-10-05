@@ -891,7 +891,7 @@ function MarketDetail({ market: baseMarket, onClose, comboPositions, onAddToComb
         <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t p-3 shadow-lg" style={{ borderColor: `${NAVY}18` }}>
           {isMulti ? (
             <button
-              onClick={() => setDrawer({})}
+              onClick={() => autoAdd ? onAddToCombo(baseMarket, market.outcomes![0]!.label, market.outcomes![0]!.odds) : setDrawer({})}
               style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, background: NAVY, boxShadow: BV_DK }}
               className="w-full py-3 text-sm font-700 uppercase tracking-wider text-white active:scale-[0.99]"
             >
@@ -899,10 +899,10 @@ function MarketDetail({ market: baseMarket, onClose, comboPositions, onAddToComb
             </button>
           ) : (
             <div className="grid grid-cols-2 gap-2">
-              <button onClick={() => setDrawer({ position: 'YES' })} style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, background: '#1F6B45', boxShadow: BV_DK }} className="py-3 text-sm font-700 uppercase tracking-wider text-white flex items-center justify-center gap-1 active:scale-[0.99]">
+              <button onClick={() => autoAdd ? onAddToCombo(baseMarket, 'YES', market.yesOdds) : setDrawer({ position: 'YES' })} style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, background: '#1F6B45', boxShadow: BV_DK }} className="py-3 text-sm font-700 uppercase tracking-wider text-white flex items-center justify-center gap-1 active:scale-[0.99]">
                 Buy YES · <OddsNumber value={market.yesOdds} />
               </button>
-              <button onClick={() => setDrawer({ position: 'NO' })} style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, background: ORANGE, boxShadow: BV_DK }} className="py-3 text-sm font-700 uppercase tracking-wider text-white flex items-center justify-center gap-1 active:scale-[0.99]">
+              <button onClick={() => autoAdd ? onAddToCombo(baseMarket, 'NO', market.noOdds) : setDrawer({ position: 'NO' })} style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, background: ORANGE, boxShadow: BV_DK }} className="py-3 text-sm font-700 uppercase tracking-wider text-white flex items-center justify-center gap-1 active:scale-[0.99]">
                 Buy NO · <OddsNumber value={market.noOdds} />
               </button>
             </div>
