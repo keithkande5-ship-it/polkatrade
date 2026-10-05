@@ -1777,12 +1777,14 @@ function PolkaAppInner() {
     return () => { document.title = PAGE_TITLE }
   }, [selectedMarket])
   useEffect(() => { if (!hydrated) return; setProgress(true); const timer = setTimeout(() => setProgress(false), 300); return () => clearTimeout(timer) }, [activeView, selectedMarket?.id, portfolio.length, hydrated])
-  const openMarket = (market: Market) => { setSelectedMarket(market); window.history.replaceState(null, '', `?market=${market.id}`) }
-  const closeMarket = () => { setSelectedMarket(null); window.history.replaceState(null, '', window.location.pathname) }
+  const marketUrl = (market: Market) => `/?market=${market.id}&title=${slugify(market.question)}`
+  const tabUrl = (view: View) => `/?tab=${view}&title=${VIEW_TITLES[view]}`
+  const openMarket = (market: Market) => { setSelectedMarket(market); window.history.pushState(null, '', marketUrl(market)) }
+  const closeMarket = () => { setSelectedMarket(null); window.history.pushState(null, '', tabUrl(activeView)) }
   const notify = (title: string, body: string) => setAlerts(a => [{ id: crypto.randomUUID(), title, body, read: false }, ...a])
 
   const goTo = (v: View) => {
-    const navigate = () => { setActiveView(v); if (v === 'wallet') setWalletUnread(0); if (v === 'notifications') setAlerts(a => a.map(n => ({ ...n, read: true }))) }
+    const navigate = () => { setSelectedMarket(null); setActiveView(v); window.history.pushState(null, '', tabUrl(v)); if (v === 'wallet') setWalletUnread(0); if (v === 'notifications') setAlerts(a => a.map(n => ({ ...n, read: true }))) }
     if (PRIVATE_VIEWS.includes(v)) requireAuth(`Sign in to open your ${v}`, navigate)
     else navigate()
   }
@@ -1790,10 +1792,22 @@ function PolkaAppInner() {
     if (!isSignedIn && PRIVATE_VIEWS.includes(activeView)) setActiveView('markets')
   }, [isSignedIn, activeView])
   useEffect(() => {
-    const id = Number(new URLSearchParams(window.location.search).get('market'))
-    const m = markets.find(x => x.id === id)
-    if (m) setSelectedMarket(m)
-  }, [markets])
+    if (!hydrated) return
+    const restoreUrl = () => {
+      const params = new URLSearchParams(window.location.search)
+      const id = Number(params.get('market'))
+      const market = markets.find(item => item.id === id)
+      if (market) { setSelectedMarket(market); setActiveView('markets'); return }
+      setSelectedMarket(null)
+      const tab = params.get('tab')
+      const allowed: View[] = ['markets', 'portfolio', 'leaderboard', 'wallet', 'profile', 'account', 'settings', 'notifications', 'language']
+      if (tab && allowed.includes(tab as View) && (isSignedIn || !PRIVATE_VIEWS.includes(tab as View))) setActiveView(tab as View)
+      else setActiveView('markets')
+    }
+    restoreUrl()
+    window.addEventListener('popstate', restoreUrl)
+    return () => window.removeEventListener('popstate', restoreUrl)
+  }, [hydrated, markets, isSignedIn])
 
   // Custom categories
   const [customCategories, setCustomCategories] = useState<CustomCategory[]>([])
@@ -1847,6 +1861,7 @@ function PolkaAppInner() {
     setTimeout(() => setNewlyAdded(ids => ids.filter(id => id !== market.id)), 1500)
     setComboOpen(true)
     setComboMode(true)
+    push(`${position} added to your multi-slip`)
   }
 
   const removeFromCombo = (marketId: number) => {
@@ -1887,7 +1902,7 @@ function PolkaAppInner() {
     setPortfolio(ps => [newTrade, ...ps])
     clearCombo()
     setComboOpen(false)
-    setActiveView('portfolio')
+    goTo('portfolio')
   }
 
   const confirmTrade = (market: Market, position: string, odds: number, amount: number) => {
@@ -1916,9 +1931,8 @@ function PolkaAppInner() {
     setPortfolio(ps => [trade, ...ps])
     bump(market.id, position === 'NO' ? -1 : 1, amount)
     push('Prediction recorded — added to portfolio')
-    window.history.replaceState(null, '', window.location.pathname)
     setSelectedMarket(null)
-    setActiveView('portfolio')
+    goTo('portfolio')
   }
 
   const requestTrade = (market: Market, position: string, odds: number, amount: number) => requireAuth('Sign in to place a prediction', () => {
@@ -1946,7 +1960,7 @@ function PolkaAppInner() {
     setMarkets(ms => [market, ...ms])
     setShowCreate(false)
     setActiveCategory('All')
-    setActiveView('markets')
+    goTo('markets')
     push('Market published — now live in the feed')
   }
 
@@ -1998,7 +2012,7 @@ function PolkaAppInner() {
         <div aria-hidden="true" className={`absolute top-0 left-0 h-[2px] transition-all duration-300 motion-reduce:transition-none ${progress ? 'w-full opacity-100' : 'w-0 opacity-0'}`} style={{ background: '#2A7B6F' }} />
         <div className="flex items-center h-16 px-3 sm:px-4 gap-2">
           {/* Logo */}
-          <button onClick={() => setActiveView('markets')} className="shrink-0 mr-2 sm:mr-4 hover:opacity-80 transition-opacity">
+          <button onClick={() => goTo('markets')} className="shrink-0 mr-2 sm:mr-4 hover:opacity-80 transition-opacity">
             <img src={polkaLogo.url} alt="Polka" className="block h-9 sm:h-11 w-auto object-contain" />
           </button>
 
@@ -2038,7 +2052,7 @@ function PolkaAppInner() {
             <OddsToggle />
             {isSignedIn && (
               <button
-                onClick={() => setActiveView('wallet')}
+                onClick={() => goTo('wallet')}
                 style={{ fontFamily: 'Geist Mono, monospace', borderRadius: 3, boxShadow: BV_DK, background: '#F7D000', color: '#6B21A8' }}
                 className="px-3 py-1.5 text-xs sm:text-sm font-700 whitespace-nowrap hover:brightness-110 transition-all active:scale-95"
               >
@@ -2046,13 +2060,11 @@ function PolkaAppInner() {
               </button>
             )}
             {isSignedIn ? (
-              <button
-                onClick={() => setShowDeposit(true)}
-                style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, boxShadow: BV_DK, background: '#2A7B6F' }}
-                className="px-3 py-1.5 text-sm font-700 uppercase tracking-wider text-white hover:brightness-110 transition-all hidden sm:block"
-              >
-                Deposit
-              </button>
+              <><button
+                  onClick={() => setShowDeposit(true)}
+                  style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, boxShadow: BV_DK, background: '#2A7B6F' }}
+                  className="px-3 py-1.5 text-sm font-700 uppercase tracking-wider text-white hover:brightness-110 transition-all hidden sm:block"
+                >Deposit</button><button onClick={() => goTo('profile')} aria-label="Open profile" className="ml-1"><ProfileAvatar profile={profile} size="sm" /></button></>
             ) : (
               <div className="flex items-center gap-1"><button
                 onClick={() => setShowSignIn(true)}
@@ -2254,7 +2266,7 @@ function PolkaAppInner() {
                 <div style={{ fontFamily: 'Barlow Condensed, sans-serif' }} className="text-xs uppercase tracking-widest text-white/40 font-600">Top Traders — September 2025</div>
               </div>
               {[
-                { rank: 1, name: settings.leaderboardPublic ? 'Njeri K.' : 'Anonymous', profit: 'KES 142,300', accuracy: '73%', markets: 84 },
+                { rank: 1, name: settings.leaderboardPublic ? (profile.name || 'Polka Trader') : 'Anonymous Trader', profit: 'KES 142,300', accuracy: '73%', markets: 84 },
                 { rank: 2, name: 'Ochieng M.', profit: 'KES 98,100', accuracy: '69%', markets: 121 },
                 { rank: 3, name: 'Wanjiku A.', profit: 'KES 76,500', accuracy: '71%', markets: 56 },
                 { rank: 4, name: 'Kamau B.', profit: 'KES 55,200', accuracy: '65%', markets: 203 },
@@ -2319,7 +2331,7 @@ function PolkaAppInner() {
                 <div key={i} className="flex items-start gap-2 px-3 py-2.5 border-b" style={{ background: i % 2 === 0 ? WARM : MINERAL, borderColor: `${NAVY}08` }}>
                   <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] text-white font-600 shrink-0 mt-0.5" style={{ background: NAVY }}>{b.user[0]}</div>
                   <div className="flex-1 min-w-0">
-                    <div className="text-[10px] truncate" style={{ color: `${NAVY}45` }}>{b.user} · <span className="font-600" style={{ color: NAVY }}>{b.action}</span></div>
+                    <div className="text-[10px] truncate" style={{ color: `${NAVY}45` }}>{!settings.leaderboardPublic && i === 0 ? 'Anonymous Trader' : b.user} · <span className="font-600" style={{ color: NAVY }}>{b.action}</span></div>
                     <div className="text-[10px] truncate" style={{ color: `${NAVY}35` }}>{b.market}</div>
                     <div style={{ fontFamily: 'Geist Mono, monospace', color: NAVY }} className="text-[10px] mt-0.5">{b.amount}</div>
                   </div>
@@ -2405,6 +2417,8 @@ function PolkaAppInner() {
           onAddToCombo={(market, position, odds, amount) => addToCombo(market, position, odds, amount)}
           onConfirm={requestTrade}
           myTrades={isSignedIn ? portfolio : []}
+          autoAdd={settings.autoAddToMultiSlip}
+          anonymous={!settings.leaderboardPublic}
         />
       )}
       {pendingTrade && <div className="fixed inset-0 z-[85] flex items-center justify-center p-4" style={{ background: `${NAVY}90` }} onClick={() => setPendingTrade(null)}><div role="dialog" aria-label="Confirm Trade" className="w-full max-w-sm p-5 space-y-4" style={{ background: WARM, borderRadius: 4 }} onClick={e => e.stopPropagation()}><h2 className="text-lg font-700" style={{ color: NAVY }}>Confirm prediction</h2><p className="text-sm" style={{ color: NAVY }}>{pendingTrade.position} · {pendingTrade.market.question}</p><p className="text-sm" style={{ color: NAVY }}>Stake: {formatKES(pendingTrade.amount)}</p><div className="flex gap-2"><button onClick={() => setPendingTrade(null)} className="flex-1 border py-2" style={{ borderRadius: 3 }}>Cancel</button><button onClick={() => { const trade = pendingTrade; setPendingTrade(null); confirmTrade(trade.market, trade.position, trade.odds, trade.amount) }} className="flex-1 py-2 text-white" style={{ background: '#2A7B6F', borderRadius: 3 }}>Confirm Trade</button></div></div></div>}
@@ -2436,7 +2450,7 @@ function PolkaAppInner() {
         <Tutorial
           onClose={() => setShowTutorial(false)}
           onRegister={() => { setShowTutorial(false); setShowSignIn(true) }}
-          onBrowse={() => { setShowTutorial(false); setActiveView('markets') }}
+          onBrowse={() => { setShowTutorial(false); goTo('markets') }}
         />
       )}
       {showCustomCat && <CustomCategoryModal onClose={() => setShowCustomCat(false)} onCreate={c => setCustomCategories(cs => [...cs, c])} />}
