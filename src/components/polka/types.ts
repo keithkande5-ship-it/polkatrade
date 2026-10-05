@@ -73,6 +73,7 @@ export type PolkaProfile = {
   name: string
   email: string
   phone: string
+  avatar?: string | undefined
   joined: string
   verified: boolean
   oddsFormat: 'percent' | 'multiplier'

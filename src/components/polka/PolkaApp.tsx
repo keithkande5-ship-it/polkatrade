@@ -12,7 +12,7 @@ import { Tutorial } from './Tutorial'
 import { WithdrawModal } from './WithdrawModal'
 import { DepositModal } from './DepositModal'
 import { AuthModal } from './AuthModal'
-import { ShieldCheck, MessageCircle, Lock, Link2, HelpCircle, Pencil, Check, X } from 'lucide-react'
+import { ShieldCheck, MessageCircle, Lock, Link2, HelpCircle, Pencil, Check, X, ArrowUpRight, Camera, Trash2 } from 'lucide-react'
 import { TradeDrawer } from './TradeBar'
 import { InfoModal } from './InfoModal'
 
@@ -28,9 +28,11 @@ const SKY     = '#DCE7EF'
 const WARM    = '#FAF9F6'
 const MINERAL = '#F2F0EA'
 
-const DEFAULT_PROFILE: PolkaProfile = { name: '', email: '', phone: '', joined: '', verified: false, oddsFormat: 'percent', signedIn: false }
+const DEFAULT_PROFILE: PolkaProfile = { name: '', email: '', phone: '', avatar: '', joined: '', verified: false, oddsFormat: 'percent', signedIn: false }
 const DEFAULT_SETTINGS: PolkaSettings = { confirmTrade: true, autoAddToMultiSlip: false, leaderboardPublic: true }
 const PAGE_TITLE = "Polka.trade — Kenya's Prediction Market"
+const VIEW_TITLES: Record<View, string> = { markets: 'markets', portfolio: 'my-portfolio', leaderboard: 'leaderboard', wallet: 'wallet', profile: 'my-profile', account: 'my-account', settings: 'settings', notifications: 'notifications', language: 'language' }
+const slugify = (value: string) => value.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 function readSaved<T>(key: string, fallback: T, valid: (value: unknown) => value is T): T {
   try {
     const value: unknown = JSON.parse(localStorage.getItem(key) ?? 'null')
@@ -38,7 +40,7 @@ function readSaved<T>(key: string, fallback: T, valid: (value: unknown) => value
   } catch { return fallback }
 }
 function isRecord(value: unknown): value is Record<string, unknown> { return Boolean(value) && typeof value === 'object' && !Array.isArray(value) }
-const isProfile = (v: unknown): v is PolkaProfile => isRecord(v) && typeof v['name'] === 'string' && typeof v['email'] === 'string' && typeof v['phone'] === 'string' && typeof v['signedIn'] === 'boolean' && (v['oddsFormat'] === 'percent' || v['oddsFormat'] === 'multiplier')
+const isProfile = (v: unknown): v is PolkaProfile => isRecord(v) && typeof v['name'] === 'string' && typeof v['email'] === 'string' && typeof v['phone'] === 'string' && (v['avatar'] === undefined || typeof v['avatar'] === 'string') && typeof v['signedIn'] === 'boolean' && (v['oddsFormat'] === 'percent' || v['oddsFormat'] === 'multiplier')
 const isSettings = (v: unknown): v is PolkaSettings => isRecord(v) && typeof v['confirmTrade'] === 'boolean' && typeof v['autoAddToMultiSlip'] === 'boolean' && typeof v['leaderboardPublic'] === 'boolean'
 const isMarket = (v: unknown): v is Market => isRecord(v) && typeof v['id'] === 'number' && typeof v['question'] === 'string' && typeof v['yesOdds'] === 'number' && typeof v['noOdds'] === 'number' && typeof v['category'] === 'string'
 const isWalletEntry = (v: unknown): v is WalletEntry => isRecord(v) && typeof v['id'] === 'string' && typeof v['amount'] === 'number' && typeof v['description'] === 'string' && (v['status'] === 'completed' || v['status'] === 'pending')
@@ -48,6 +50,11 @@ const isArrayOf = <T,>(v: unknown, check: (item: unknown) => item is T): v is T[
 function CountBadge({ count }: { count: number }) {
   if (!count) return null
   return <span className="inline-flex min-w-4 h-4 px-1 items-center justify-center rounded-full text-[10px] font-700 text-white" style={{ background: ORANGE }} aria-label={`${count} new`}>{count}</span>
+}
+
+function ProfileAvatar({ profile, size = 'md' }: { profile: PolkaProfile; size?: 'sm' | 'md' | 'lg' }) {
+  const dimensions = size === 'sm' ? 'w-8 h-8 text-xs' : size === 'lg' ? 'w-20 h-20 text-2xl' : 'w-12 h-12 text-lg'
+  return profile.avatar ? <img src={profile.avatar} alt={`${profile.name || 'User'} profile`} className={`${dimensions} rounded-full object-cover shrink-0`} style={{ boxShadow: BV_DK }} /> : <div className={`${dimensions} rounded-full flex items-center justify-center font-700 text-white shrink-0`} style={{ background: ORANGE, boxShadow: BV_DK }}>{profile.name[0]?.toUpperCase() || 'P'}</div>
 }
 
 
@@ -337,7 +344,7 @@ function SideMenu({ open, onClose, isSignedIn, balance, onNavigate, onSignIn, on
           <button onClick={onClose} className="absolute top-4 right-4 text-white/40 hover:text-white text-xl">×</button>
           {isSignedIn ? (
             <div>
-              <div className="w-12 h-12 rounded-full flex items-center justify-center text-lg font-700 text-white mb-2" style={{ background: ORANGE, boxShadow: BV_DK }}>{profile.name[0]?.toUpperCase()}</div>
+              <div className="mb-2"><ProfileAvatar profile={profile} /></div>
               <div style={{ fontFamily: 'Barlow Condensed, sans-serif' }} className="text-white font-700 text-base">{profile.name}</div>
               <div className="text-white/40 text-xs">{profile.email}</div>
               <div className="mt-3 flex items-center gap-2">
@@ -462,10 +469,10 @@ function MarketRow({ market: baseMarket, index, onSelect, comboMode, autoAdd, co
           <span
             role="button"
             onClick={e => { e.stopPropagation(); onSelect(baseMarket) }}
-            className="whitespace-nowrap underline cursor-pointer hover:opacity-80"
-            style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 11, color: ORANGE, textTransform: 'uppercase', letterSpacing: '0.06em' }}
+            className="whitespace-nowrap cursor-pointer hover:opacity-80 inline-flex items-center gap-0.5 font-['Geist',sans-serif] text-[11px] font-500"
+            style={{ color: '#2A7B6F' }}
           >
-            view details
+            View more details <ArrowUpRight size={11} />
           </span>
         </p>
 
@@ -574,11 +581,13 @@ type MarketDetailProps = {
   onAddToCombo: (m: Market, position: string, odds: number, amount?: number) => void
   onConfirm: (m: Market, position: string, odds: number, amount: number) => void
   myTrades: PortfolioTrade[]
+  autoAdd: boolean
+  anonymous: boolean
 }
 
 const QUICK_AMOUNTS = [99, 199, 999, 9999]
 
-function MarketDetail({ market: baseMarket, onClose, comboPositions, onAddToCombo, onConfirm, myTrades }: MarketDetailProps) {
+function MarketDetail({ market: baseMarket, onClose, comboPositions, onAddToCombo, onConfirm, myTrades, autoAdd, anonymous }: MarketDetailProps) {
   const market = useLiveMarket(baseMarket)
   const [tab, setTab] = useState<'overview' | 'activity'>('overview')
   const [position, setPosition] = useState<string>(market.outcomes ? market.outcomes[0]!.label : 'YES')
@@ -602,7 +611,8 @@ function MarketDetail({ market: baseMarket, onClose, comboPositions, onAddToComb
   const statusLabel = marketStatus(market)
   const { push } = useToasts()
   const [drawer, setDrawer] = useState<{ position?: string | undefined } | null>(null)
-  const shareUrl = typeof window !== 'undefined' ? `${window.location.origin}/?market=${market.id}` : ''
+  const choosePosition = (label: string, odds: number) => { setPosition(label); if (autoAdd) onAddToCombo(baseMarket, label, odds) }
+  const shareUrl = typeof window !== 'undefined' ? `${window.location.origin}/?market=${market.id}&title=${slugify(market.question)}` : ''
   const shareWhatsApp = () => {
     window.open(`https://wa.me/?text=${encodeURIComponent(`Trade on Polka: ${market.question} — ${shareUrl}`)}`, '_blank', 'noopener,noreferrer')
   }
@@ -631,7 +641,7 @@ function MarketDetail({ market: baseMarket, onClose, comboPositions, onAddToComb
         <div className="mx-auto w-full max-w-6xl p-3 sm:p-4 pb-24 lg:pb-4 flex flex-col lg:grid lg:grid-cols-[minmax(0,1fr)_360px] gap-3 sm:gap-4 items-start">
 
           {/* ── Trade panel (first on mobile, right column on desktop) ── */}
-          <div className="order-1 lg:order-2 w-full lg:sticky lg:top-4">
+          <div className="order-2 lg:order-2 w-full lg:sticky lg:top-4">
             {!isResolved ? (
               <div className="border p-4" style={{ background: SKY, borderRadius: 4, borderColor: `${NAVY}15`, boxShadow: BV_IN }}>
                 <div style={{ fontFamily: 'Barlow Condensed, sans-serif', color: `${NAVY}50` }} className="text-[10px] uppercase tracking-widest font-600 mb-3">Place a prediction</div>
@@ -641,7 +651,7 @@ function MarketDetail({ market: baseMarket, onClose, comboPositions, onAddToComb
                     {market.outcomes!.map((o, i) => (
                       <button
                         key={i}
-                        onClick={() => setPosition(o.label)}
+                        onClick={() => choosePosition(o.label, o.odds)}
                         style={{
                           borderRadius: 3, fontFamily: 'Barlow Condensed, sans-serif',
                           background: position === o.label ? o.color : 'transparent',
@@ -660,7 +670,7 @@ function MarketDetail({ market: baseMarket, onClose, comboPositions, onAddToComb
                     {(['YES', 'NO'] as const).map(p => (
                       <button
                         key={p}
-                        onClick={() => setPosition(p)}
+                        onClick={() => choosePosition(p, p === 'YES' ? market.yesOdds : market.noOdds)}
                         style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, boxShadow: position === p ? BV_DK : BV_IN, background: position === p ? NAVY : `${WARM}70`, border: `1px solid ${position === p ? NAVY : NAVY + '25'}`, color: position === p ? WARM : NAVY }}
                         className="flex-1 py-3 text-base font-700 uppercase tracking-wider transition-all flex items-center justify-center gap-1.5"
                       >
@@ -756,7 +766,7 @@ function MarketDetail({ market: baseMarket, onClose, comboPositions, onAddToComb
           </div>
 
           {/* ── Market body ── */}
-          <div className="order-2 lg:order-1 w-full space-y-3">
+          <div className="order-1 lg:order-1 w-full space-y-3">
             <div className="border p-4" style={{ background: WARM, borderRadius: 4, borderColor: `${NAVY}15` }}>
               <div className="flex items-center gap-2 flex-wrap">
                 <StatusPill market={market} />
@@ -854,7 +864,7 @@ function MarketDetail({ market: baseMarket, onClose, comboPositions, onAddToComb
                     <div key={i} className="flex items-center gap-3 px-4 py-3" style={{ background: i % 2 === 0 ? WARM : SKY }}>
                       <div className="w-8 h-8 rounded-full flex items-center justify-center text-[11px] text-white font-600 shrink-0" style={{ background: NAVY }}>{b.user[0]}</div>
                       <div className="flex-1 min-w-0">
-                        <div className="text-xs font-500" style={{ color: NAVY }}>{b.user}</div>
+                        <div className="text-xs font-500" style={{ color: NAVY }}>{anonymous ? 'Anonymous Trader' : b.user}</div>
                         <div className="text-[11px] truncate" style={{ color: `${NAVY}45` }}>{b.market}</div>
                       </div>
                       <div className="text-xs font-700 px-2 py-0.5 text-white shrink-0" style={{ background: NAVY, borderRadius: 2, fontFamily: 'Barlow Condensed, sans-serif' }}>{b.action}</div>
