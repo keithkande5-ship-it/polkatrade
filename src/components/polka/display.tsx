@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import {
   LayoutGrid, MapPin, Trophy, Landmark, Bitcoin, Film, TrendingUp, FlaskConical, Globe,
   Twitter, Music2, Instagram, Hash, ListOrdered, BarChart3, Wallet, User, Settings, Bell,
@@ -76,34 +76,47 @@ export function OddsToggle({ color = '#F7D000' }: { color?: string }) {
   )
 }
 
-/* ── Skeuomorphic flip number ─────────────────────────────────────────────── */
+/* ── Rolling odometer number ──────────────────────────────────────────────── */
 
 export function FlipNumber({ value, className, style }: { value: string | number; className?: string | undefined; style?: React.CSSProperties | undefined }) {
   const text = String(value)
   const [shown, setShown] = useState(text)
-  const [flip, setFlip] = useState(false)
+  const [previous, setPrevious] = useState(text)
+  const [rolling, setRolling] = useState(false)
+  const [direction, setDirection] = useState<1 | -1>(1)
+  const frame = useRef<number | null>(null)
 
   useEffect(() => {
     if (text === shown) return
-    setFlip(true)
-    const t = setTimeout(() => { setShown(text); setFlip(false) }, 240)
-    return () => clearTimeout(t)
+    setDirection(Number.parseFloat(text.replace(/[^\d.-]/g, '')) >= Number.parseFloat(shown.replace(/[^\d.-]/g, '')) ? 1 : -1)
+    setPrevious(shown)
+    setShown(text)
+    setRolling(false)
+    frame.current = requestAnimationFrame(() => { frame.current = requestAnimationFrame(() => setRolling(true)) })
+    const timer = window.setTimeout(() => setPrevious(text), 310)
+    return () => { if (frame.current !== null) cancelAnimationFrame(frame.current); window.clearTimeout(timer) }
   }, [text, shown])
 
+  const width = Math.max(previous.length, shown.length)
+  const oldChars = previous.padStart(width, ' ')
+  const newChars = shown.padStart(width, ' ')
   return (
-    <span className={className} style={{ display: 'inline-block', perspective: 260, ...style }}>
-      <span
-        style={{
-          display: 'inline-block',
-          transition: 'transform 0.24s ease, opacity 0.24s ease, filter 0.24s ease',
-          transformOrigin: 'center 60%',
-          transform: flip ? 'rotateX(-72deg) translateY(-1px)' : 'rotateX(0deg)',
-          opacity: flip ? 0.35 : 1,
-          textShadow: '0 1px 0 rgba(255,255,255,0.55)',
-        }}
-      >
-        {shown}
-      </span>
+    <span className={className} aria-label={shown} style={{ display: 'inline-flex', whiteSpace: 'pre', ...style }}>
+      {Array.from({ length: width }, (_, index) => {
+        const oldChar = oldChars[index] ?? ' '
+        const newChar = newChars[index] ?? ' '
+        if (oldChar === newChar || previous === shown) return <span key={`${index}-${newChar}`}>{newChar}</span>
+        const chars = direction === 1 ? [oldChar, newChar] : [newChar, oldChar]
+        const transform = direction === 1 ? (rolling ? 'translateY(-50%)' : 'translateY(0)') : (rolling ? 'translateY(0)' : 'translateY(-50%)')
+        return (
+          <span key={index} aria-hidden="true" style={{ display: 'inline-block', height: '1em', lineHeight: '1em', overflow: 'hidden' }}>
+            <span style={{ display: 'flex', flexDirection: 'column', transition: 'transform 300ms cubic-bezier(0.22, 1, 0.36, 1)', transform }}>
+              <span style={{ height: '1em', lineHeight: '1em' }}>{chars[0]}</span>
+              <span style={{ height: '1em', lineHeight: '1em' }}>{chars[1]}</span>
+            </span>
+          </span>
+        )
+      })}
     </span>
   )
 }
