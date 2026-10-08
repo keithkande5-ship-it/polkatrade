@@ -67,7 +67,7 @@ export type CustomCategory = {
   emoji: string
 }
 
-export type InfoTab = 'how' | 'responsible' | 'terms' | 'support'
+export type InfoTab = 'how' | 'faq' | 'responsible' | 'terms' | 'support'
 
 export type PolkaProfile = {
   name: string

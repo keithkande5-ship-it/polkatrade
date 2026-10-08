@@ -12,7 +12,7 @@ import { Tutorial } from './Tutorial'
 import { WithdrawModal } from './WithdrawModal'
 import { DepositModal } from './DepositModal'
 import { AuthModal } from './AuthModal'
-import { ShieldCheck, MessageCircle, Lock, Link2, HelpCircle, Pencil, Check, X, ArrowUpRight, Camera, Trash2 } from 'lucide-react'
+import { ShieldCheck, MessageCircle, Lock, Link2, HelpCircle, Pencil, Check, X, ArrowUpRight, Camera, Trash2, Plus, Zap, User } from 'lucide-react'
 import { TradeDrawer } from './TradeBar'
 import { InfoModal } from './InfoModal'
 
@@ -50,6 +50,22 @@ const isArrayOf = <T,>(v: unknown, check: (item: unknown) => item is T): v is T[
 function CountBadge({ count }: { count: number }) {
   if (!count) return null
   return <span className="inline-flex min-w-4 h-4 px-1 items-center justify-center rounded-full text-[10px] font-700 text-white" style={{ background: ORANGE }} aria-label={`${count} new`}>{count}</span>
+}
+
+function MarketSkeletons() {
+  return (
+    <div aria-label="Loading markets">
+      {Array.from({ length: 6 }, (_, i) => (
+        <div key={i} className="px-4 py-3 border-b flex items-center gap-3" style={{ borderColor: `${NAVY}10`, background: i % 2 ? SKY : WARM }}>
+          <div className="flex-1 space-y-2">
+            <div className="h-3 w-24 rounded animate-pulse" style={{ background: `${NAVY}10` }} />
+            <div className="h-4 rounded animate-pulse" style={{ width: `${60 + (i % 3) * 12}%`, background: `${NAVY}12` }} />
+          </div>
+          <div className="h-8 w-20 rounded animate-pulse" style={{ background: `${NAVY}10` }} />
+        </div>
+      ))}
+    </div>
+  )
 }
 
 function ProfileAvatar({ profile, size = 'md' }: { profile: PolkaProfile; size?: 'sm' | 'md' | 'lg' }) {
@@ -428,7 +444,7 @@ function MarketRow({ market: baseMarket, index, onSelect, comboMode, autoAdd, co
 
   const handlePositionClick = (e: React.MouseEvent, position: string, odds: number) => {
     e.stopPropagation()
-    if (comboMode || autoAdd) {
+    if (comboMode) {
       onAddToCombo(market, position, odds)
     } else {
       onSelect(market)
@@ -516,7 +532,15 @@ function MarketRow({ market: baseMarket, index, onSelect, comboMode, autoAdd, co
 
           {/* Action buttons */}
           {!isResolved && (
-            <div className="flex gap-1.5 ml-auto shrink-0">
+            <div className="flex gap-1.5 ml-auto shrink-0 items-center">
+              <button
+                type="button"
+                aria-label="Add to slip"
+                title="Add to slip"
+                onClick={e => { e.stopPropagation(); const o = market.outcomes?.[0]; onAddToCombo(market, o ? o.label : 'YES', o ? o.odds : market.yesOdds) }}
+                style={{ borderRadius: 3, border: `1px solid ${inCombo ? '#F7D000' : NAVY + '25'}`, color: NAVY, fontFamily: 'Barlow Condensed, sans-serif' }}
+                className="px-2 py-1 text-[11px] font-700 flex items-center gap-0.5 hover:brightness-95"
+              ><Plus size={12} /> Slip</button>
               {isMulti ? (
                 <div
                   role="button"
@@ -611,7 +635,7 @@ function MarketDetail({ market: baseMarket, onClose, comboPositions, onAddToComb
   const statusLabel = marketStatus(market)
   const { push } = useToasts()
   const [drawer, setDrawer] = useState<{ position?: string | undefined } | null>(null)
-  const choosePosition = (label: string, odds: number) => { setPosition(label); if (autoAdd) onAddToCombo(baseMarket, label, odds) }
+  const choosePosition = (label: string, _odds: number) => { setPosition(label); if (typeof window !== 'undefined' && window.innerWidth < 1024) setDrawer({ position: label }) }
   const shareUrl = typeof window !== 'undefined' ? `${window.location.origin}/?market=${market.id}&title=${slugify(market.question)}` : ''
   const shareWhatsApp = () => {
     window.open(`https://wa.me/?text=${encodeURIComponent(`Trade on Polka: ${market.question} — ${shareUrl}`)}`, '_blank', 'noopener,noreferrer')
@@ -891,7 +915,7 @@ function MarketDetail({ market: baseMarket, onClose, comboPositions, onAddToComb
         <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t p-3 shadow-lg" style={{ borderColor: `${NAVY}18` }}>
           {isMulti ? (
             <button
-              onClick={() => autoAdd ? onAddToCombo(baseMarket, market.outcomes![0]!.label, market.outcomes![0]!.odds) : setDrawer({})}
+              onClick={() => setDrawer({})}
               style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, background: NAVY, boxShadow: BV_DK }}
               className="w-full py-3 text-sm font-700 uppercase tracking-wider text-white active:scale-[0.99]"
             >
@@ -899,10 +923,10 @@ function MarketDetail({ market: baseMarket, onClose, comboPositions, onAddToComb
             </button>
           ) : (
             <div className="grid grid-cols-2 gap-2">
-              <button onClick={() => autoAdd ? onAddToCombo(baseMarket, 'YES', market.yesOdds) : setDrawer({ position: 'YES' })} style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, background: '#1F6B45', boxShadow: BV_DK }} className="py-3 text-sm font-700 uppercase tracking-wider text-white flex items-center justify-center gap-1 active:scale-[0.99]">
+              <button onClick={() => setDrawer({ position: 'YES' })} style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, background: '#1F6B45', boxShadow: BV_DK }} className="py-3 text-sm font-700 uppercase tracking-wider text-white flex items-center justify-center gap-1 active:scale-[0.99]">
                 Buy YES · <OddsNumber value={market.yesOdds} />
               </button>
-              <button onClick={() => autoAdd ? onAddToCombo(baseMarket, 'NO', market.noOdds) : setDrawer({ position: 'NO' })} style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, background: ORANGE, boxShadow: BV_DK }} className="py-3 text-sm font-700 uppercase tracking-wider text-white flex items-center justify-center gap-1 active:scale-[0.99]">
+              <button onClick={() => setDrawer({ position: 'NO' })} style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, background: ORANGE, boxShadow: BV_DK }} className="py-3 text-sm font-700 uppercase tracking-wider text-white flex items-center justify-center gap-1 active:scale-[0.99]">
                 Buy NO · <OddsNumber value={market.noOdds} />
               </button>
             </div>
@@ -914,6 +938,7 @@ function MarketDetail({ market: baseMarket, onClose, comboPositions, onAddToComb
           market={market}
           initialPosition={drawer.position}
           onClose={() => setDrawer(null)}
+          onAddToSlip={(pos, odds) => { onAddToCombo(baseMarket, pos, odds); setDrawer(null) }}
           onConfirm={(pos, odds, amt) => {
             if (locked && locked !== pos) { push(`You already hold ${locked} on this market`, 'warn'); return }
             setDrawer(null)
@@ -1601,7 +1626,7 @@ function SettingsPage({ settings, onChange, oddsFormat, onOddsChange, onAccount 
     <SkeletonPage title="Settings" icon="⚙️">
       <div className="p-4 space-y-5">
         <div className="flex items-center justify-between gap-3 border-b py-3 text-sm" style={{ color: NAVY }}><span>Default Odds Display</span><div className="flex border" style={{ borderRadius: 3 }}>{(['percent', 'multiplier'] as const).map(m => <button key={m} onClick={() => onOddsChange(m)} aria-pressed={oddsFormat === m} className="px-3 py-2 text-xs" style={{ background: oddsFormat === m ? NAVY : WARM, color: oddsFormat === m ? WARM : NAVY }}>{m === 'percent' ? '40%' : '2.50x'}</button>)}</div></div>
-        {([['confirmTrade', 'Trade Confirmation Prompt'], ['autoAddToMultiSlip', 'Auto-add to Multi-Slip']] as const).map(([key, label]) => <label key={key} className="flex items-center justify-between gap-3 border-b py-3 text-sm" style={{ color: NAVY }}><span>{label}</span><input type="checkbox" checked={settings[key]} onChange={e => onChange({ ...settings, [key]: e.target.checked })} className="w-5 h-5 accent-[#2A7B6F]" /></label>)}
+        {([['confirmTrade', 'Trade Confirmation Prompt']] as const).map(([key, label]) => <label key={key} className="flex items-center justify-between gap-3 border-b py-3 text-sm" style={{ color: NAVY }}><span>{label}</span><input type="checkbox" checked={settings[key]} onChange={e => onChange({ ...settings, [key]: e.target.checked })} className="w-5 h-5 accent-[#2A7B6F]" /></label>)}
         <label className="flex items-center justify-between gap-3 border-b py-3 text-sm" style={{ color: NAVY }}><span>Leaderboard Privacy</span><input type="checkbox" checked={!settings.leaderboardPublic} onChange={e => onChange({ ...settings, leaderboardPublic: !e.target.checked })} className="w-5 h-5 accent-[#2A7B6F]" /></label>
         <button onClick={onAccount} className="flex items-center gap-2 text-sm underline" style={{ color: NAVY }}>Security & password <span aria-hidden>→</span></button>
       </div>
@@ -2050,7 +2075,8 @@ function PolkaAppInner() {
           {/* Right */}
           <div className="flex items-center gap-1.5 ml-auto shrink-0">
             <OddsToggle />
-            {isSignedIn && (
+            {!hydrated && <span aria-label="Loading balance" className="h-7 w-28 rounded animate-pulse" style={{ background: 'rgba(255,255,255,0.15)' }} />}
+            {hydrated && isSignedIn && (
               <button
                 onClick={() => goTo('wallet')}
                 style={{ fontFamily: 'Geist Mono, monospace', borderRadius: 3, boxShadow: BV_DK, background: '#F7D000', color: '#6B21A8' }}
@@ -2064,7 +2090,7 @@ function PolkaAppInner() {
                   onClick={() => setShowDeposit(true)}
                   style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, boxShadow: BV_DK, background: '#2A7B6F' }}
                   className="px-3 py-1.5 text-sm font-700 uppercase tracking-wider text-white hover:brightness-110 transition-all hidden sm:block"
-                >Deposit</button><button onClick={() => goTo('profile')} aria-label="Open profile" className="ml-1"><ProfileAvatar profile={profile} size="sm" /></button></>
+                >Deposit</button></>
             ) : (
               <div className="flex items-center gap-1"><button
                 onClick={() => setShowSignIn(true)}
@@ -2105,6 +2131,15 @@ function PolkaAppInner() {
               {isSignedIn && (key === 'portfolio' || key === 'wallet') && <CountBadge count={badges[key]} />}
             </button>
           ))}
+          <button
+            onClick={() => isSignedIn ? goTo('profile') : setShowSignIn(true)}
+            aria-label="Profile"
+            className="flex-1 flex flex-col items-center py-2 transition-colors"
+            style={{ color: activeView === 'profile' ? '#F7D000' : 'rgba(255,255,255,0.35)' }}
+          >
+            {!hydrated ? <span className="w-[17px] h-[17px] rounded-full animate-pulse" style={{ background: 'rgba(255,255,255,0.2)' }} /> : isSignedIn ? <ProfileAvatar profile={profile} size="sm" /> : <User size={17} />}
+            <span style={{ fontFamily: 'Barlow Condensed, sans-serif' }} className="text-[9px] font-600 uppercase tracking-wider mt-0.5">Me</span>
+          </button>
         </div>
       </header>
 
@@ -2214,7 +2249,7 @@ function PolkaAppInner() {
                   style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, boxShadow: comboMode ? BV_DK : BV_UP, background: comboMode ? '#6B21A8' : WARM, color: comboMode ? '#F7D000' : `${NAVY}45`, border: `1px solid ${comboMode ? '#6B21A8' : NAVY + '15'}` }}
                   className="shrink-0 px-2 py-1.5 text-[11px] font-700 uppercase tracking-wider transition-all"
                 >
-                  {comboMode ? '⚡ ON' : '⚡'}
+                  <span className="flex items-center gap-1"><Zap size={12} />{comboMode ? 'ON' : ''}</span>
                 </button>
               </div>
 
@@ -2226,7 +2261,9 @@ function PolkaAppInner() {
               </div>
 
               <div className="flex-1 overflow-y-auto">
-                {filteredMarkets.length === 0 ? (
+                {!hydrated ? (
+                  <MarketSkeletons />
+                ) : filteredMarkets.length === 0 ? (
                   <div className="flex items-center justify-center py-16 text-sm" style={{ color: `${NAVY}30` }}>No markets found.</div>
                 ) : (
                   filteredMarkets.map((m, i) => (
@@ -2351,7 +2388,7 @@ function PolkaAppInner() {
             {[
               { label: 'Terms', action: () => setShowTerms(true) },
               { label: 'How It Works', action: () => setInfoTab('how') },
-              { label: 'FAQ', action: () => setInfoTab('how') },
+              { label: 'FAQ', action: () => setInfoTab('faq') },
               { label: 'Responsible Trading', action: () => setInfoTab('responsible') },
               { label: 'Privacy', action: () => setInfoTab('terms') },
               { label: 'Support', action: () => setInfoTab('support') },
