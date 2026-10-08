@@ -2075,7 +2075,8 @@ function PolkaAppInner() {
           {/* Right */}
           <div className="flex items-center gap-1.5 ml-auto shrink-0">
             <OddsToggle />
-            {isSignedIn && (
+            {!hydrated && <span aria-label="Loading balance" className="h-7 w-28 rounded animate-pulse" style={{ background: 'rgba(255,255,255,0.15)' }} />}
+            {hydrated && isSignedIn && (
               <button
                 onClick={() => goTo('wallet')}
                 style={{ fontFamily: 'Geist Mono, monospace', borderRadius: 3, boxShadow: BV_DK, background: '#F7D000', color: '#6B21A8' }}
@@ -2387,7 +2388,7 @@ function PolkaAppInner() {
             {[
               { label: 'Terms', action: () => setShowTerms(true) },
               { label: 'How It Works', action: () => setInfoTab('how') },
-              { label: 'FAQ', action: () => setInfoTab('how') },
+              { label: 'FAQ', action: () => setInfoTab('faq') },
               { label: 'Responsible Trading', action: () => setInfoTab('responsible') },
               { label: 'Privacy', action: () => setInfoTab('terms') },
               { label: 'Support', action: () => setInfoTab('support') },

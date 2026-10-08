@@ -13,6 +13,7 @@ const HEAD = { fontFamily: 'Barlow Condensed, sans-serif' }
 
 const TABS: { id: InfoTab; label: string }[] = [
   { id: 'how', label: 'How It Works' },
+  { id: 'faq', label: 'FAQ' },
   { id: 'responsible', label: 'Responsible Trading' },
   { id: 'terms', label: 'Terms & Privacy' },
   { id: 'support', label: 'Support' },
@@ -78,11 +79,25 @@ export function InfoModal({ initialTab = 'how', onClose, onOpenTutorial }: {
                   </div>
                 </div>
               ))}
+              <Section title="Market lifecycle">Markets open for trading, close at their end date, then resolve using the stated official source. Status moves Open → Closed → Resolved (or Disputed while under review).</Section>
+              <Section title="Order matching">Polka is peer-to-peer: every stake joins the pool for its outcome. You are not trading against the house — your return comes from traders who picked the other outcomes.</Section>
+              <Section title="Multipliers">A 40% chance shows as 2.50x. Multiply your stake by it for an estimated return. Odds move as money enters each side, so your final payout depends on the pool at resolution.</Section>
+              <Section title="Resolution">Once the source confirms the result, winners share the total pool less a 2% fee, credited to their wallet. Cancelled markets refund every stake.</Section>
               {onOpenTutorial && (
                 <button onClick={onOpenTutorial} style={{ ...HEAD, borderRadius: 3, background: ORANGE, boxShadow: BV_DK }} className="w-full py-2.5 text-sm font-700 uppercase tracking-wider text-white hover:brightness-110">
                   Open visual tutorial
                 </button>
               )}
+            </>
+          )}
+
+          {tab === 'faq' && (
+            <>
+              <Section title="How do I deposit?">Tap Deposit, enter at least KES 100 and your Safaricom number, then approve the M-Pesa prompt with your PIN. Most deposits reflect within a minute.</Section>
+              <Section title="How long do withdrawals take?">Withdrawals go to your M-Pesa number, usually within a few minutes. Busy periods or checks can take up to 24 hours. The minimum is KES 100.</Section>
+              <Section title="What are the fees?">Deposits are free. Withdrawals carry a tiered M-Pesa fee shown before you confirm (for example KES 12 for KES 100–499). Winning pools carry a 2% platform fee.</Section>
+              <Section title="My deposit didn't arrive">Wait two minutes, then tap Verify Payment. If it still hasn't arrived, send your M-Pesa confirmation message to WhatsApp Support.</Section>
+              <Section title="Can I cancel a prediction?">No. Once confirmed, a prediction stays in the pool until the market resolves.</Section>
             </>
           )}
 
@@ -94,6 +109,7 @@ export function InfoModal({ initialTab = 'how', onClose, onOpenTutorial }: {
               </div>
               <Section title="Budget discipline">Only trade money you can afford to lose. Set a weekly budget before you start and never chase losses. Predictions are not a source of income.</Section>
               <Section title="Warning signs">Borrowing to trade, hiding activity from family, or trading to escape stress are signs to stop and take a break.</Section>
+              <Section title="Loss limits">Ask WhatsApp Support to set a daily, weekly or monthly deposit limit. Lowering a limit takes effect immediately; raising it takes 24 hours.</Section>
               <Section title="Self-exclusion">You can ask us to lock your account for 30 days, 6 months or permanently. Contact WhatsApp Support and we will apply it — the lock cannot be reversed early.</Section>
             </>
           )}
