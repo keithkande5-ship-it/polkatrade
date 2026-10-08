@@ -198,11 +198,11 @@ export function TradeDrawer({ market, initialPosition, onClose, onConfirm, onAdd
             </label>
           )}
           <button
-            onClick={() => onConfirm(position, odds, stake)}
+            onClick={() => toSlip && onAddToSlip ? onAddToSlip(position, odds) : onConfirm(position, odds, stake)}
             style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, background: ORANGE, boxShadow: BV_DK }}
             className="w-full py-4 text-base font-800 uppercase tracking-wider text-white hover:brightness-110 active:scale-[0.99] flex items-center justify-center gap-2"
           >
-            <Check size={18} /> Confirm Trade
+            <Check size={18} /> {toSlip ? 'Add to Slip' : 'Confirm Trade'}
           </button>
         </div>
       </div>

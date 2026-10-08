@@ -101,15 +101,15 @@ export function FlipNumber({ value, className, style }: { value: string | number
   const oldChars = previous.padStart(width, ' ')
   const newChars = shown.padStart(width, ' ')
   return (
-    <span className={className} aria-label={shown} style={{ display: 'inline-flex', whiteSpace: 'pre', ...style }}>
+    <span className={`font-mono tabular-nums ${className ?? ''}`} aria-label={shown} style={{ display: 'inline-flex', alignItems: 'baseline', whiteSpace: 'pre', fontVariantNumeric: 'tabular-nums', lineHeight: 1, verticalAlign: 'baseline', ...style }}>
       {Array.from({ length: width }, (_, index) => {
         const oldChar = oldChars[index] ?? ' '
         const newChar = newChars[index] ?? ' '
-        if (oldChar === newChar || previous === shown) return <span key={`${index}-${newChar}`}>{newChar}</span>
+        if (oldChar === newChar || previous === shown) return <span key={`${index}-${newChar}`} style={{ display: 'inline-block', width: '1ch', textAlign: 'center' }}>{newChar}</span>
         const chars = direction === 1 ? [oldChar, newChar] : [newChar, oldChar]
         const transform = direction === 1 ? (rolling ? 'translateY(-50%)' : 'translateY(0)') : (rolling ? 'translateY(0)' : 'translateY(-50%)')
         return (
-          <span key={index} aria-hidden="true" style={{ display: 'inline-block', height: '1em', lineHeight: '1em', overflow: 'hidden' }}>
+          <span key={index} aria-hidden="true" style={{ display: 'inline-block', width: '1ch', height: '1em', lineHeight: '1em', overflow: 'hidden', verticalAlign: 'bottom', textAlign: 'center' }}>
             <span style={{ display: 'flex', flexDirection: 'column', transition: 'transform 300ms cubic-bezier(0.22, 1, 0.36, 1)', transform }}>
               <span style={{ height: '1em', lineHeight: '1em' }}>{chars[0]}</span>
               <span style={{ height: '1em', lineHeight: '1em' }}>{chars[1]}</span>
