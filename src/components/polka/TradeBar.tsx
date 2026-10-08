@@ -122,15 +122,17 @@ type DrawerProps = {
   initialPosition?: string | undefined
   onClose: () => void
   onConfirm: (position: string, odds: number, amount: number) => void
+  onAddToSlip?: ((position: string, odds: number) => void) | undefined
 }
 
 /** Slide-up drawer used by the mobile sticky trade bar in market details. */
-export function TradeDrawer({ market, initialPosition, onClose, onConfirm }: DrawerProps) {
+export function TradeDrawer({ market, initialPosition, onClose, onConfirm, onAddToSlip }: DrawerProps) {
   const options = market.outcomes?.length
     ? market.outcomes.map(o => ({ label: o.label, odds: o.odds, color: o.color }))
     : [{ label: 'YES', odds: market.yesOdds, color: NAVY }, { label: 'NO', odds: market.noOdds, color: ORANGE }]
   const [position, setPosition] = useState(initialPosition ?? options[0]!.label)
   const [stake, setStake] = useState(100)
+  const [toSlip, setToSlip] = useState(false)
   const odds = options.find(o => o.label === position)?.odds ?? 50
   const potential = Math.round(estimatePayout(stake, odds))
 
@@ -189,6 +191,12 @@ export function TradeDrawer({ market, initialPosition, onClose, onConfirm }: Dra
           </div>
           <p className="text-[10px] leading-relaxed" style={{ color: `${NAVY}45` }}>Estimate only — parimutuel payout depends on the winning pool at resolution.</p>
 
+          {onAddToSlip && (
+            <label className="flex items-center justify-between gap-3 text-sm py-1" style={{ color: NAVY }}>
+              <span>Stage in combo slip instead</span>
+              <input type="checkbox" checked={toSlip} onChange={e => setToSlip(e.target.checked)} className="w-5 h-5 accent-[#2A7B6F]" />
+            </label>
+          )}
           <button
             onClick={() => onConfirm(position, odds, stake)}
             style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, background: ORANGE, boxShadow: BV_DK }}
