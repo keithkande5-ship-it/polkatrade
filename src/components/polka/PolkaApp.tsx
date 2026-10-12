@@ -15,6 +15,7 @@ import { AuthModal } from './AuthModal'
 import { ShieldCheck, MessageCircle, Lock, Link2, HelpCircle, Pencil, Check, X, ArrowUpRight, Camera, Trash2, Plus, Zap, User } from 'lucide-react'
 import { TradeDrawer } from './TradeBar'
 import { InfoModal } from './InfoModal'
+import { PromoCarousel } from './PromoCarousel'
 
 const PRIVATE_VIEWS: View[] = ['portfolio', 'wallet', 'notifications', 'settings', 'profile', 'account']
 
@@ -2131,17 +2132,18 @@ function PolkaAppInner() {
               {isSignedIn && (key === 'portfolio' || key === 'wallet') && <CountBadge count={badges[key]} />}
             </button>
           ))}
-          <button
-            onClick={() => isSignedIn ? goTo('profile') : setShowSignIn(true)}
-            aria-label="Profile"
-            className="flex-1 flex flex-col items-center py-2 transition-colors"
-            style={{ color: activeView === 'profile' ? '#F7D000' : 'rgba(255,255,255,0.35)' }}
-          >
-            {!hydrated ? <span className="w-[17px] h-[17px] rounded-full animate-pulse" style={{ background: 'rgba(255,255,255,0.2)' }} /> : isSignedIn ? <ProfileAvatar profile={profile} size="sm" /> : <User size={17} />}
-            <span style={{ fontFamily: 'Barlow Condensed, sans-serif' }} className="text-[9px] font-600 uppercase tracking-wider mt-0.5">Me</span>
-          </button>
         </div>
       </header>
+
+      {/* ── Promo carousel ── */}
+      {activeView === 'markets' && (
+        <PromoCarousel onAction={a => {
+          if (a === 'combo') { setComboMode(true); setComboOpen(true) }
+          else if (a === 'sports') setActiveCategory('Sports' as CategoryId)
+          else if (a === 'deposit') requireAuth('Sign in to deposit funds', () => setShowDeposit(true))
+          else setInfoTab('how')
+        }} />
+      )}
 
       {/* ── Live ticker ── */}
       {activeView === 'markets' && (
