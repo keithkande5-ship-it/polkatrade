@@ -15,6 +15,7 @@ import { AuthModal } from './AuthModal'
 import { ShieldCheck, MessageCircle, Lock, Link2, HelpCircle, Pencil, Check, X, ArrowUpRight, Camera, Trash2, Plus, Zap, User } from 'lucide-react'
 import { TradeDrawer } from './TradeBar'
 import { InfoModal } from './InfoModal'
+import { PromoCarousel } from './PromoCarousel'
 
 const PRIVATE_VIEWS: View[] = ['portfolio', 'wallet', 'notifications', 'settings', 'profile', 'account']
 
@@ -157,159 +158,110 @@ function ComboSlip({ positions, open, onToggle, onRemove, onClear, onCheckout, n
   const ADD_OPTS = [0, 10, 99, 999, 9999]
   const n = positions.length
   const math = n > 0 ? comboMath(n, addAmount, positions) : null
+  const GOLD = '#F7D000'
+  const GREEN = '#1F8A4C'
 
   return (
     <>
-      {/* Floating FAB — mobile only */}
-      <div className="fixed bottom-5 right-4 z-50 sm:hidden">
-        <div
+      {/* Bottom dock — mobile only, shows when slip has picks */}
+      {n > 0 && !open && (
+        <button
           onClick={onToggle}
-          role="button"
-          className="relative flex items-center justify-center w-14 h-14 rounded-full cursor-pointer select-none active:scale-95 transition-transform"
-          style={{ background: '#F7D000', boxShadow: '0 4px 20px rgba(107,33,168,0.35), ' + BV_DK }}
+          className="fixed bottom-3 left-3 right-3 z-50 sm:hidden flex items-center gap-3 px-4 py-3 active:scale-[0.99] transition-transform"
+          style={{ background: NAVY, borderRadius: 10, boxShadow: '0 10px 30px rgba(21,43,67,0.4)' }}
         >
-          {n > 0 && (
-            <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-700 text-white animate-bounce" style={{ background: '#6B21A8' }}>{n}</span>
-          )}
-          <span style={{ fontFamily: 'Barlow Condensed, sans-serif', color: '#6B21A8', fontSize: 11, fontWeight: 800, letterSpacing: '0.05em' }}>COMBO</span>
-        </div>
-      </div>
+          <span className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-800" style={{ background: GOLD, color: NAVY, fontFamily: 'Barlow Condensed, sans-serif' }}>{n}</span>
+          <span className="flex-1 text-left">
+            <span className="block text-[10px] uppercase tracking-widest" style={{ color: `${WARM}80`, fontFamily: 'Barlow Condensed, sans-serif' }}>Betslip · {n} pick{n > 1 ? 's' : ''}</span>
+            <span className="block text-sm font-700" style={{ color: WARM }}>Potential win <span style={{ color: GOLD }}>{math ? formatKES(Math.round(math.totalEstimatedReturn)) : ''}</span></span>
+          </span>
+          <span className="text-xs font-800 uppercase tracking-wider px-3 py-1.5" style={{ background: GOLD, color: NAVY, borderRadius: 6, fontFamily: 'Barlow Condensed, sans-serif' }}>Open</span>
+        </button>
+      )}
 
-      {/* Drawer — slides up on mobile, right panel on desktop */}
       {open && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-stretch justify-end" onClick={onToggle}>
+        <div className="fixed inset-0 z-50 flex items-end sm:items-stretch justify-end" style={{ background: `${NAVY}66` }} onClick={onToggle}>
           <div
-            className="w-full sm:w-80 max-h-[90dvh] sm:max-h-full sm:h-full flex flex-col overflow-hidden"
-            style={{ background: WARM, borderTop: `1px solid ${NAVY}22`, borderLeft: `1px solid ${NAVY}22`, boxShadow: '-8px 0 32px rgba(21,43,67,0.15)' }}
+            className="w-full sm:w-96 max-h-[88dvh] sm:max-h-full sm:h-full flex flex-col overflow-hidden"
+            style={{ background: WARM, borderTopLeftRadius: 14, borderTopRightRadius: 14, boxShadow: '0 -12px 40px rgba(21,43,67,0.3)', animation: 'polkaSlipUp 0.22s ease-out' }}
             onClick={e => e.stopPropagation()}
           >
+            <style>{'@keyframes polkaSlipUp{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}'}</style>
+            <div className="sm:hidden mx-auto mt-2 h-1 w-10 rounded-full" style={{ background: `${NAVY}25` }} />
             {/* Header */}
-            <div className="px-4 py-3 flex items-center justify-between shrink-0" style={{ background: '#6B21A8', boxShadow: BV_DK }}>
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full animate-pulse" style={{ background: '#F7D000' }} />
-                <span style={{ fontFamily: 'Barlow Condensed, sans-serif', color: '#F7D000', letterSpacing: '0.08em' }} className="text-sm font-800 uppercase">Combo Slip</span>
-                {n > 0 && <span className="text-xs text-white/60 font-500">— {n} position{n > 1 ? 's' : ''}</span>}
+            <div className="px-4 pt-3 pb-3 flex items-center justify-between shrink-0 border-b" style={{ borderColor: `${NAVY}12` }}>
+              <div>
+                <div className="text-lg font-800 uppercase tracking-wide" style={{ fontFamily: 'Barlow Condensed, sans-serif', color: NAVY }}>Betslip</div>
+                <div className="text-[11px]" style={{ color: `${NAVY}60` }}>{n === 0 ? 'No picks yet' : `${n} pick${n > 1 ? 's' : ''} · Multi`}</div>
               </div>
-              <div className="flex items-center gap-3">
-                {n > 0 && (
-                  <button onClick={onClear} className="text-white/50 hover:text-white text-xs uppercase tracking-wider" style={{ fontFamily: 'Barlow Condensed, sans-serif' }}>Clear</button>
-                )}
-                <button onClick={onToggle} className="text-white/50 hover:text-white text-xl w-7 h-7 flex items-center justify-center">×</button>
+              <div className="flex items-center gap-2">
+                {n > 0 && <button onClick={onClear} className="text-xs font-700 uppercase tracking-wider px-2.5 py-1.5" style={{ fontFamily: 'Barlow Condensed, sans-serif', color: ORANGE, border: `1px solid ${ORANGE}55`, borderRadius: 6 }}>Clear all</button>}
+                <button onClick={onToggle} aria-label="Close betslip" className="w-9 h-9 flex items-center justify-center rounded-full" style={{ background: `${NAVY}0D`, color: NAVY }}><X size={18} /></button>
               </div>
             </div>
 
-            {/* Empty state */}
             {n === 0 && (
-              <div className="flex-1 flex flex-col items-center justify-center gap-3 p-6 text-center">
-                <div style={{ fontFamily: 'Barlow Condensed, sans-serif', color: '#6B21A8', fontSize: 48, opacity: 0.12, fontWeight: 800 }}>COMBO</div>
-                <p className="text-sm text-[#152B43]/40">Click <strong>YES</strong>, <strong>NO</strong>, or any outcome on a market to add it to your combo slip.</p>
-                <p className="text-xs text-[#152B43]/25 mt-1">Base: 1 KES per position. Add more at checkout.</p>
+              <div className="flex-1 flex flex-col items-center justify-center gap-2 p-8 text-center">
+                <div className="w-14 h-14 rounded-full flex items-center justify-center" style={{ background: `${GOLD}40`, color: NAVY }}><Link2 size={24} /></div>
+                <p className="text-sm font-600" style={{ color: NAVY }}>Your betslip is empty</p>
+                <p className="text-xs" style={{ color: `${NAVY}60` }}>Tap <strong>+ Slip</strong> on any market to add picks.</p>
               </div>
             )}
 
-            {/* Positions */}
             {n > 0 && (
-              <div className="flex-1 overflow-y-auto divide-y" style={{ borderColor: `${NAVY}10` }}>
-                {positions.map((p, i) => {
+              <div className="flex-1 overflow-y-auto p-3 space-y-2" style={{ background: MINERAL }}>
+                {positions.map(p => {
                   const isFlash = newlyAdded.includes(p.marketId)
                   return (
-                    <div
-                      key={p.marketId}
-                      className="px-3 py-2.5 flex items-start gap-2 transition-all"
-                      style={{
-                        background: isFlash ? '#F7D000' + '22' : (i % 2 === 0 ? WARM : MINERAL),
-                        border: isFlash ? `1px solid #F7D000` : 'none',
-                      }}
-                    >
+                    <div key={p.marketId} className="flex items-start gap-3 p-3 transition-all" style={{ background: WARM, borderRadius: 10, border: `1px solid ${isFlash ? GOLD : NAVY + '12'}`, boxShadow: '0 1px 2px rgba(21,43,67,0.06)' }}>
                       <div className="flex-1 min-w-0">
-                        <div className="text-[11px] text-[#152B43]/50 truncate leading-snug">{p.marketQuestion}</div>
-                        <div className="flex items-center gap-1.5 mt-0.5">
-                          <span
-                            className="text-xs font-700 px-2 py-0.5 text-white"
-                            style={{ background: '#6B21A8', borderRadius: 3, fontFamily: 'Barlow Condensed, sans-serif' }}
-                          >
-                            {p.position}
-                          </span>
-                          <span style={{ fontFamily: 'Geist Mono, monospace', color: NAVY }} className="text-[10px] font-500">{p.odds}%</span>
-                          {p.customAmount && (
-                            <span className="text-[10px] text-[#152B43]/50">· KES {p.customAmount}</span>
-                          )}
-                          {isFlash && <span className="text-[10px] font-700" style={{ color: '#6B21A8' }}>✓ Added</span>}
+                        <div className="text-[13px] font-500 leading-snug line-clamp-2" style={{ color: NAVY }}>{p.marketQuestion}</div>
+                        <div className="flex items-center gap-2 mt-2">
+                          <span className="text-xs font-800 px-2 py-0.5" style={{ background: NAVY, color: WARM, borderRadius: 4, fontFamily: 'Barlow Condensed, sans-serif' }}>{p.position}</span>
+                          <span className="text-xs font-700" style={{ fontFamily: 'Geist Mono, monospace', color: GREEN }}>{p.odds}%</span>
+                          {p.customAmount ? <span className="text-[11px]" style={{ color: `${NAVY}55` }}>· KES {p.customAmount}</span> : null}
+                          {isFlash && <span className="text-[10px] font-700 ml-auto" style={{ color: GREEN }}>✓ Added</span>}
                         </div>
                       </div>
-                      <button
-                        onClick={() => onRemove(p.marketId)}
-                        className="text-[#152B43]/30 hover:text-[#152B43] text-base shrink-0 mt-0.5"
-                      >×</button>
+                      <button onClick={() => onRemove(p.marketId)} aria-label="Remove pick" className="w-7 h-7 flex items-center justify-center rounded-full shrink-0" style={{ background: `${NAVY}0A`, color: `${NAVY}70` }}><X size={14} /></button>
                     </div>
                   )
                 })}
               </div>
             )}
 
-            {/* Checkout panel */}
             {n > 0 && math && (
-              <div className="border-t shrink-0 p-4 space-y-3" style={{ borderColor: `${NAVY}15`, background: SKY }}>
-                {/* Base stake info */}
-                <div className="flex justify-between text-xs">
-                  <span className="text-[#152B43]/50">Base ({n} × KES 1)</span>
-                  <span style={{ fontFamily: 'Geist Mono, monospace' }} className="font-600 text-[#152B43]">KES {n}</span>
-                </div>
-
-                {/* Add amounts */}
+              <div className="border-t shrink-0 p-4 space-y-3" style={{ borderColor: `${NAVY}12`, background: WARM }}>
                 <div>
-                  <div style={{ fontFamily: 'Barlow Condensed, sans-serif' }} className="text-[10px] uppercase tracking-widest text-[#152B43]/40 font-600 mb-1.5">Add to combo</div>
-                  <div className="flex gap-1.5 flex-wrap">
+                  <div className="text-[10px] uppercase tracking-widest font-700 mb-2" style={{ fontFamily: 'Barlow Condensed, sans-serif', color: `${NAVY}55` }}>Add stake (base KES {n})</div>
+                  <div className="grid grid-cols-5 gap-1.5">
                     {ADD_OPTS.map(amt => (
-                      <button
-                        key={amt}
-                        onClick={() => setAddAmount(amt)}
-                        style={{
-                          fontFamily: 'Barlow Condensed, sans-serif',
-                          borderRadius: 3,
-                          boxShadow: addAmount === amt ? BV_DK : BV_UP,
-                          background: addAmount === amt ? '#6B21A8' : WARM,
-                          color: addAmount === amt ? '#F7D000' : `${NAVY}99`,
-                          border: `1px solid ${addAmount === amt ? '#6B21A8' : NAVY + '18'}`,
-                        }}
-                        className="px-2.5 py-1 text-xs font-700 transition-all"
-                      >
-                        {amt === 0 ? 'Base only' : `+${amt.toLocaleString()}`}
+                      <button key={amt} onClick={() => setAddAmount(amt)} className="py-2 text-xs font-800 transition-all active:scale-95"
+                        style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 6, background: addAmount === amt ? NAVY : `${NAVY}08`, color: addAmount === amt ? GOLD : NAVY }}>
+                        {amt === 0 ? 'Base' : `+${amt.toLocaleString()}`}
                       </button>
                     ))}
                   </div>
                 </div>
-
-                {/* Summary */}
-                <div className="space-y-1 text-xs border-t pt-2" style={{ borderColor: `${NAVY}15` }}>
-                  <div className="flex justify-between">
-                    <span className="text-[#152B43]/50">Total stake</span>
-                    <span style={{ fontFamily: 'Geist Mono, monospace' }} className="font-600 text-[#152B43]">{formatKES(math.totalStake)}</span>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="p-2.5" style={{ background: `${NAVY}08`, borderRadius: 8 }}>
+                    <div className="text-[10px] uppercase tracking-widest" style={{ color: `${NAVY}55`, fontFamily: 'Barlow Condensed, sans-serif' }}>Total stake</div>
+                    <div className="text-base font-700" style={{ fontFamily: 'Geist Mono, monospace', color: NAVY }}>{formatKES(math.totalStake)}</div>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-[#152B43]/50">Per position</span>
-                    <span style={{ fontFamily: 'Geist Mono, monospace' }} className="font-600 text-[#152B43]">{formatKES(Math.round(math.perPosition))}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-[#152B43]/50">Est. return (all win)</span>
-                    <span style={{ fontFamily: 'Geist Mono, monospace' }} className="font-700 text-[#2A6B3A]">{formatKES(Math.round(math.totalEstimatedReturn))}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-[#152B43]/50">Est. profit</span>
-                    <span style={{ fontFamily: 'Geist Mono, monospace', color: math.estimatedProfit > 0 ? '#2A6B3A' : ORANGE }} className="font-700">
-                      {math.estimatedProfit > 0 ? '+' : ''}{formatKES(Math.round(math.estimatedProfit))}
-                    </span>
+                  <div className="p-2.5" style={{ background: `${GREEN}14`, borderRadius: 8 }}>
+                    <div className="text-[10px] uppercase tracking-widest" style={{ color: GREEN, fontFamily: 'Barlow Condensed, sans-serif' }}>Potential win</div>
+                    <div className="text-base font-800" style={{ fontFamily: 'Geist Mono, monospace', color: GREEN }}>{formatKES(Math.round(math.totalEstimatedReturn))}</div>
                   </div>
                 </div>
-
-                <button
-                  onClick={() => onCheckout(addAmount)}
-                  style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 3, background: '#6B21A8', boxShadow: BV_DK }}
-                  className="w-full py-3 text-sm font-800 uppercase tracking-wider text-white hover:brightness-110 transition-all active:scale-[0.99]"
-                >
-                  Confirm Combo — {formatKES(math.totalStake)}
+                <div className="flex justify-between text-[11px]" style={{ color: `${NAVY}60` }}>
+                  <span>Per pick {formatKES(Math.round(math.perPosition))}</span>
+                  <span style={{ color: math.estimatedProfit > 0 ? GREEN : ORANGE }}>Profit {math.estimatedProfit > 0 ? '+' : ''}{formatKES(Math.round(math.estimatedProfit))}</span>
+                </div>
+                <button onClick={() => onCheckout(addAmount)} className="w-full py-3.5 text-base font-800 uppercase tracking-wider active:scale-[0.99] transition-all hover:brightness-105"
+                  style={{ fontFamily: 'Barlow Condensed, sans-serif', borderRadius: 10, background: GOLD, color: NAVY, boxShadow: '0 6px 18px rgba(247,208,0,0.4)' }}>
+                  Place bet · {formatKES(math.totalStake)}
                 </button>
-                <p className="text-[9px] text-[#152B43]/30 text-center">Parimutuel · Platform 2% fee · 18+ only</p>
+                <p className="text-[10px] text-center" style={{ color: `${NAVY}45` }}>Parimutuel · 2% platform fee · 18+ only</p>
               </div>
             )}
           </div>
@@ -2131,17 +2083,18 @@ function PolkaAppInner() {
               {isSignedIn && (key === 'portfolio' || key === 'wallet') && <CountBadge count={badges[key]} />}
             </button>
           ))}
-          <button
-            onClick={() => isSignedIn ? goTo('profile') : setShowSignIn(true)}
-            aria-label="Profile"
-            className="flex-1 flex flex-col items-center py-2 transition-colors"
-            style={{ color: activeView === 'profile' ? '#F7D000' : 'rgba(255,255,255,0.35)' }}
-          >
-            {!hydrated ? <span className="w-[17px] h-[17px] rounded-full animate-pulse" style={{ background: 'rgba(255,255,255,0.2)' }} /> : isSignedIn ? <ProfileAvatar profile={profile} size="sm" /> : <User size={17} />}
-            <span style={{ fontFamily: 'Barlow Condensed, sans-serif' }} className="text-[9px] font-600 uppercase tracking-wider mt-0.5">Me</span>
-          </button>
         </div>
       </header>
+
+      {/* ── Promo carousel ── */}
+      {activeView === 'markets' && (
+        <PromoCarousel onAction={a => {
+          if (a === 'combo') { setComboMode(true); setComboOpen(true) }
+          else if (a === 'sports') setActiveCategory('Sports' as CategoryId)
+          else if (a === 'deposit') requireAuth('Sign in to deposit funds', () => setShowDeposit(true))
+          else setInfoTab('how')
+        }} />
+      )}
 
       {/* ── Live ticker ── */}
       {activeView === 'markets' && (
